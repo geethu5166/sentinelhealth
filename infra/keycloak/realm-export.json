@@ -1,0 +1,231 @@
+{
+  "id": "sentinelhealth",
+  "realm": "sentinelhealth",
+  "enabled": true,
+  "displayName": "SentinelHealth",
+  "displayNameHtml": "<strong>SentinelHealth</strong>",
+  "registrationAllowed": false,
+  "loginTheme": "keycloak",
+  "sslRequired": "none",
+  "roles": {
+    "realm": [
+      {
+        "name": "public_health_analyst",
+        "description": "Analyst for public health data and surveillance dashboards"
+      },
+      {
+        "name": "occupational_health_analyst",
+        "description": "Analyst for occupational health and workplace hazard data"
+      },
+      {
+        "name": "workplace_safety_manager",
+        "description": "Manager responsible for workplace safety compliance and reporting"
+      },
+      {
+        "name": "data_steward",
+        "description": "Steward responsible for data quality, lineage, and governance"
+      },
+      {
+        "name": "privacy_officer",
+        "description": "Officer responsible for privacy compliance and data suppression policies"
+      },
+      {
+        "name": "platform_admin",
+        "description": "Full platform administrator with access to all features"
+      },
+      {
+        "name": "regulator",
+        "description": "External regulator with read-only access to compliance reports"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "sentinel-frontend",
+      "name": "SentinelHealth Frontend",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "rootUrl": "http://localhost:8080",
+      "baseUrl": "/",
+      "redirectUris": [
+        "http://localhost:8080/*"
+      ],
+      "webOrigins": [
+        "+"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:8080/*"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ],
+      "protocolMappers": [
+        {
+          "name": "sentinel-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "sentinel-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "claim.name": "aud",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "sentinel-api",
+      "name": "SentinelHealth API",
+      "enabled": true,
+      "bearerOnly": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    }
+  ],
+  "users": [
+    {
+      "username": "analyst@demo.local",
+      "email": "analyst@demo.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Priya",
+      "lastName": "Sharma",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "public_health_analyst"
+      ]
+    },
+    {
+      "username": "ohanalyst@demo.local",
+      "email": "ohanalyst@demo.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Arjun",
+      "lastName": "Mehta",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "occupational_health_analyst"
+      ]
+    },
+    {
+      "username": "safety@demo.local",
+      "email": "safety@demo.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Kavitha",
+      "lastName": "Reddy",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "workplace_safety_manager"
+      ]
+    },
+    {
+      "username": "steward@demo.local",
+      "email": "steward@demo.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Rahul",
+      "lastName": "Gupta",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "data_steward"
+      ]
+    },
+    {
+      "username": "privacy@demo.local",
+      "email": "privacy@demo.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Ananya",
+      "lastName": "Iyer",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "privacy_officer"
+      ]
+    },
+    {
+      "username": "admin@demo.local",
+      "email": "admin@demo.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Vikram",
+      "lastName": "Singh",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "platform_admin"
+      ]
+    },
+    {
+      "username": "regulator@demo.local",
+      "email": "regulator@demo.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Meera",
+      "lastName": "Patel",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "regulator"
+      ]
+    }
+  ],
+  "scopeMappings": [],
+  "clientScopeMappings": {}
+}

@@ -1,0 +1,30 @@
+hazard: "heat_illness"
+version: "1.0.0"
+jurisdiction: "demo_fictional"
+sector: "industrial_and_construction"
+source_link: "https://www.osha.gov/heat-exposure"
+approval_status: "approved"
+evidence_requirements:
+  min_signal_families: 2
+  required_families: ["environmental"]
+contraindications:
+  - "Do not administer cold shock treatments without qualified medical supervision."
+  - "Do not assess individual employee clinical fitness using this playbook."
+
+action_tiers:
+  tier_1_preparation:
+    title: "Heat Watch: Verify Hydration and Cooling Facilities"
+    action: "Ensure potable cold water points, shaded rest areas, and heat illness signage are active across all operational zones."
+    accountable_role: "workplace_safety_manager"
+    approval_role: null
+    review_window_hours: 24
+    completion_evidence_required: "Site checklist confirmation"
+
+  tier_2_adjusted_operations:
+    title: "Heat Warning: Implement Work-Rest Cycles and Shift Rescheduling"
+    action: "Activate heat stress protocol: mandatory 15-minute rest breaks per hour during peak ambient hours (12:00-16:00), buddy monitoring, and shift re-allocation for heavy physical exertion."
+    accountable_role: "workplace_safety_manager"
+    approval_role: "occupational_health_analyst"
+    review_window_hours: 12
+    completion_evidence_required: "Signed shift rescheduling log and supervisor verification"
+

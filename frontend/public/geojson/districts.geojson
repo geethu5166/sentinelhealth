@@ -1,0 +1,72 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "DIST-DHANPUR",
+        "name": "Dhanpur District",
+        "level": "district",
+        "population_estimate": 850000,
+        "type": "administrative_district"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [79.05, 21.10],
+            [79.20, 21.10],
+            [79.20, 21.25],
+            [79.05, 21.25],
+            [79.05, 21.10]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ZONE-LAKSHMI",
+        "name": "Lakshmi Industrial Corridor",
+        "level": "sub_district",
+        "population_estimate": 120000,
+        "type": "industrial_zone"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [79.20, 21.10],
+            [79.35, 21.10],
+            [79.35, 21.25],
+            [79.20, 21.25],
+            [79.20, 21.10]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ZONE-SURYANAGAR",
+        "name": "Surya Nagar Urban Ward",
+        "level": "ward",
+        "population_estimate": 65000,
+        "type": "urban_residential"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [79.05, 21.25],
+            [79.20, 21.25],
+            [79.20, 21.38],
+            [79.05, 21.38],
+            [79.05, 21.25]
+          ]
+        ]
+      }
+    }
+  ]
+}
+

@@ -1,0 +1,67 @@
+# SentinelHealth Automated PostgreSQL RLS Test Stack
+# Runs isolated integration tests against live PostGIS 17
+# Usage:
+#   docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from test-runner
+
+services:
+  test-postgres:
+    image: postgis/postgis:17-3.4
+    container_name: sentinel-test-postgres
+    restart: "no"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-test_postgres_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-sentinelhealth}
+      MIGRATOR_DB_USER: ${MIGRATOR_DB_USER:-sentinel_migrator}
+      MIGRATOR_DB_PASSWORD: ${MIGRATOR_DB_PASSWORD:-sentinel_migrator_pass_2024}
+      APP_DB_USER: ${APP_DB_USER:-sentinel_app}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-sentinel_app_pass_2024}
+    volumes:
+      - ./infra/postgres/init-roles.sh:/docker-entrypoint-initdb.d/01-init-roles.sh:ro
+    ports:
+      - "${POSTGRES_TEST_PORT:-5434}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-sentinelhealth}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  test-migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sentinel-test-migrate
+    restart: "no"
+    command: alembic upgrade head
+    environment:
+      SENTINEL_DATABASE_URL: postgresql+asyncpg://sentinel_migrator:sentinel_migrator_pass_2024@test-postgres:5432/sentinelhealth
+      SENTINEL_MIGRATION_DATABASE_URL: postgresql+asyncpg://sentinel_migrator:sentinel_migrator_pass_2024@test-postgres:5432/sentinelhealth
+      SENTINEL_ENVIRONMENT: local
+    volumes:
+      - ./backend:/app
+    depends_on:
+      test-postgres:
+        condition: service_healthy
+
+  test-runner:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sentinel-test-rls-runner
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "pip install --no-cache-dir pytest pytest-asyncio asyncpg sqlalchemy > /dev/null 2>&1 || true;
+       python -m pytest tests/postgres/ -v --tb=short"
+    environment:
+      SENTINEL_TEST_POSTGRES_APP_URL: postgresql+asyncpg://sentinel_app:sentinel_app_pass_2024@test-postgres:5432/sentinelhealth
+      SENTINEL_TEST_POSTGRES_MIGRATOR_URL: postgresql+asyncpg://sentinel_migrator:sentinel_migrator_pass_2024@test-postgres:5432/sentinelhealth
+      SENTINEL_ENVIRONMENT: local
+      SENTINEL_DEMO_MODE: "false"
+      PYTHONPATH: /app
+    volumes:
+      - ./backend:/app
+    depends_on:
+      test-migrate:
+        condition: service_completed_successfully

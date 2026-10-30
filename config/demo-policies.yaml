@@ -1,0 +1,70 @@
+metadata:
+  version: "0.1.0"
+  status: "demo_only"
+  disclaimer: >
+    These policies are demonstration defaults using synthetic data.
+    They have not been validated for any jurisdiction, workplace, or population.
+    Do not use in any operational, clinical, or regulatory context without
+    appropriate professional review and approval.
+
+privacy:
+  min_contributors: 10
+  suppress_count_range:
+    min: 1
+    max: 4
+  complementary_suppression: true
+  fixed_reporting_windows: true
+  default_reporting_window_days: 7
+  max_filter_dimensions: 3
+  export_requires_review: true
+
+detection:
+  baseline:
+    default_method: "recent_history"
+    min_history_days: 28
+    preferred_history_days: 90
+    max_history_days: 365
+    weekday_matching: true
+    exclude_scored_interval: true
+
+  ewma:
+    smoothing_factor: 0.3
+    control_limit_sigma: 2.5
+    min_observations: 14
+
+  thresholds:
+    environmental_watch:
+      heat:
+        apparent_temperature_celsius: 40.0
+        unit: "celsius"
+        averaging_period: "daily_maximum"
+        jurisdiction: "demo_fictional"
+        source: "demo_threshold"
+        status: "unapproved_demo"
+      air_quality:
+        pm25_24h_ugm3: 35.5
+        unit: "ug/m3"
+        averaging_period: "24_hour_mean"
+        jurisdiction: "demo_fictional"
+        source: "demo_threshold"
+        status: "unapproved_demo"
+
+  evidence_fusion:
+    corroborated_warning:
+      requires_environmental_exceedance: true
+      requires_health_anomaly: true
+      shared_area_required: true
+      max_lag_hours: 72
+      min_signal_families: 2
+    environmental_watch:
+      requires_environmental_exceedance: true
+      requires_health_anomaly: false
+    uncorroborated_anomaly:
+      requires_environmental_exceedance: false
+      requires_health_anomaly: true
+
+alerts:
+  episode_window_hours: 72
+  resolution_window_hours: 48
+  notification_cooldown_minutes: 240
+

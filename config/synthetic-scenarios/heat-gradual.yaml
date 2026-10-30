@@ -1,0 +1,22 @@
+name: "heat-gradual"
+description: "Simulated gradual summer heat wave with lagging rise in workforce absence and clinic visits."
+hazard: "heat_illness"
+data_label: "synthetic"
+configuration:
+  seed: 42
+  duration_days: 45
+  event_start_day: 31
+  event_end_day: 38
+  temperature_baseline: 32.0
+  temperature_delta: 9.0
+  health_baseline: 12.0
+  health_multiplier: 2.8
+  workforce_baseline: 22.0
+  workforce_multiplier: 3.2
+reference_events:
+  - hazard: "heat_illness"
+    onset_day: 31
+    end_day: 38
+    severity: "warning"
+    evidence_basis: "Synthetic benchmark truth event"
+

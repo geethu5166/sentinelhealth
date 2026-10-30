@@ -1,0 +1,932 @@
+{
+  "evaluation_title": "SentinelHealth Auditable Replay Evaluation Suite",
+  "generated_at": "2026-10-30T17:47:57.673197+00:00",
+  "disclaimer": "This prototype has not undergone clinical validation, production security assessment or jurisdiction-specific legal/compliance review.",
+  "scientific_and_operational_notes": [
+    "100% sensitivity on a single synthetic event is an illustrative scenario result, not proof of general clinical detection performance.",
+    "Weather screening uses the Australian BOM empirical approximation (Ta, RH) in shade, which is non-interchangeable with direct ISO 7243 WBGT.",
+    "EWMA control limits represent nominal analytical limits under i.i.d. assumptions; empirical autocorrelation alters operational run lengths.",
+    "Detection delay (+1 day) and useful-action lead (-2 days) in gradual heat demonstrate that fused warning corroborated post-onset, while environmental watch alerted in advance.",
+    "Surveillance timeliness must be evaluated against operational opportunities for action (CDC MMWR). Scoring latency (ms) measures compute time; source-to-alert latency measures data transmission cadence and detection delay."
+  ],
+  "scenario_evaluations": {
+    "heat-gradual": {
+      "environmental_only": {
+        "policy": "environmental_only",
+        "scenario": "heat-gradual",
+        "reference_ground_truth": {
+          "total_reference_events": 1,
+          "matched_reference_events": 1,
+          "missed_reference_events": 0,
+          "event_id": "REF-EVT-HEAT-GRADUAL-2026",
+          "onset_at": "2026-07-02T00:00:00+00:00",
+          "end_at": "2026-07-09T00:00:00+00:00",
+          "earliest_useful_action_at": "2026-07-01T00:00:00+00:00"
+        },
+        "chronological_splits": {
+          "burn_in_training_days": 14,
+          "held_out_evaluation_days": 31,
+          "total_simulation_days": 45,
+          "eligible_monitored_site_weeks": 4.43
+        },
+        "auditable_episode_reconciliation": {
+          "total_alert_episodes": 1,
+          "formula": "total_alert_episodes = corroborated_health_warning + uncorroborated_health_anomaly + environmental_watch + safety_escalation",
+          "episodes_by_category": {
+            "corroborated_health_warning": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            },
+            "uncorroborated_health_anomaly": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            },
+            "environmental_watch": {
+              "total_episodes": 1,
+              "matched_episodes": 1,
+              "unmatched_episodes": 0
+            },
+            "safety_escalation": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            }
+          },
+          "matched_alert_episodes": 1,
+          "unmatched_alert_episodes": 0,
+          "false_alarm_burden_per_week": 0.0
+        },
+        "derived_performance_metrics": {
+          "event_sensitivity": 1.0,
+          "overall_alert_ppv": 1.0,
+          "corroborated_health_warning_ppv": 0.0,
+          "detection_delay_days": 1.0,
+          "useful_action_lead_days": -2.0,
+          "mean_scoring_latency_ms": 532.98,
+          "source_to_alert_operational_cadence_hours": 24.0
+        },
+        "episodes": [
+          {
+            "episode_id": "EP-HEAT-001",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "environmental_watch",
+            "days_active": [
+              32,
+              33,
+              34,
+              35,
+              37,
+              38
+            ],
+            "first_issued_at": "2026-07-03T00:00:00+00:00",
+            "last_issued_at": "2026-07-09T00:00:00+00:00",
+            "alert_count": 6,
+            "peak_evidence_score": 50.0,
+            "is_matched": true,
+            "matched_reference_event_id": "REF-EVT-HEAT-GRADUAL-2026",
+            "matching_reason": "Episode onset 2026-07-03 falls within reference event matching window [2026-06-30 to 2026-07-09]."
+          }
+        ]
+      },
+      "health_only": {
+        "policy": "health_only",
+        "scenario": "heat-gradual",
+        "reference_ground_truth": {
+          "total_reference_events": 1,
+          "matched_reference_events": 1,
+          "missed_reference_events": 0,
+          "event_id": "REF-EVT-HEAT-GRADUAL-2026",
+          "onset_at": "2026-07-02T00:00:00+00:00",
+          "end_at": "2026-07-09T00:00:00+00:00",
+          "earliest_useful_action_at": "2026-07-01T00:00:00+00:00"
+        },
+        "chronological_splits": {
+          "burn_in_training_days": 14,
+          "held_out_evaluation_days": 31,
+          "total_simulation_days": 45,
+          "eligible_monitored_site_weeks": 4.43
+        },
+        "auditable_episode_reconciliation": {
+          "total_alert_episodes": 3,
+          "formula": "total_alert_episodes = corroborated_health_warning + uncorroborated_health_anomaly + environmental_watch + safety_escalation",
+          "episodes_by_category": {
+            "corroborated_health_warning": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            },
+            "uncorroborated_health_anomaly": {
+              "total_episodes": 3,
+              "matched_episodes": 1,
+              "unmatched_episodes": 2
+            },
+            "environmental_watch": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            },
+            "safety_escalation": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            }
+          },
+          "matched_alert_episodes": 1,
+          "unmatched_alert_episodes": 2,
+          "false_alarm_burden_per_week": 0.45
+        },
+        "derived_performance_metrics": {
+          "event_sensitivity": 1.0,
+          "overall_alert_ppv": 0.3333,
+          "corroborated_health_warning_ppv": 0.0,
+          "detection_delay_days": -11.0,
+          "useful_action_lead_days": 10.0,
+          "mean_scoring_latency_ms": 32.08,
+          "source_to_alert_operational_cadence_hours": 24.0
+        },
+        "episodes": [
+          {
+            "episode_id": "EP-HEAT-001",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "uncorroborated_health_anomaly",
+            "days_active": [
+              20,
+              21,
+              22
+            ],
+            "first_issued_at": "2026-06-21T00:00:00+00:00",
+            "last_issued_at": "2026-06-23T00:00:00+00:00",
+            "alert_count": 3,
+            "peak_evidence_score": 60.0,
+            "is_matched": false,
+            "matched_reference_event_id": null,
+            "matching_reason": "Episode onset 2026-06-21 occurred prior to reference event onset (Poisson baseline fluctuation / noise; false alarm)."
+          },
+          {
+            "episode_id": "EP-HEAT-002",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "uncorroborated_health_anomaly",
+            "days_active": [
+              27
+            ],
+            "first_issued_at": "2026-06-28T00:00:00+00:00",
+            "last_issued_at": "2026-06-28T00:00:00+00:00",
+            "alert_count": 1,
+            "peak_evidence_score": 60.0,
+            "is_matched": false,
+            "matched_reference_event_id": null,
+            "matching_reason": "Episode onset 2026-06-28 occurred prior to reference event onset (Poisson baseline fluctuation / noise; false alarm)."
+          },
+          {
+            "episode_id": "EP-HEAT-003",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "uncorroborated_health_anomaly",
+            "days_active": [
+              31,
+              32,
+              33,
+              34,
+              35,
+              36,
+              37,
+              38
+            ],
+            "first_issued_at": "2026-07-02T00:00:00+00:00",
+            "last_issued_at": "2026-07-09T00:00:00+00:00",
+            "alert_count": 8,
+            "peak_evidence_score": 60.0,
+            "is_matched": true,
+            "matched_reference_event_id": "REF-EVT-HEAT-GRADUAL-2026",
+            "matching_reason": "Episode onset 2026-07-02 falls within reference event matching window [2026-06-30 to 2026-07-09]."
+          }
+        ]
+      },
+      "fused_corroborated": {
+        "policy": "fused_corroborated",
+        "scenario": "heat-gradual",
+        "reference_ground_truth": {
+          "total_reference_events": 1,
+          "matched_reference_events": 1,
+          "missed_reference_events": 0,
+          "event_id": "REF-EVT-HEAT-GRADUAL-2026",
+          "onset_at": "2026-07-02T00:00:00+00:00",
+          "end_at": "2026-07-09T00:00:00+00:00",
+          "earliest_useful_action_at": "2026-07-01T00:00:00+00:00"
+        },
+        "chronological_splits": {
+          "burn_in_training_days": 14,
+          "held_out_evaluation_days": 31,
+          "total_simulation_days": 45,
+          "eligible_monitored_site_weeks": 4.43
+        },
+        "auditable_episode_reconciliation": {
+          "total_alert_episodes": 5,
+          "formula": "total_alert_episodes = corroborated_health_warning + uncorroborated_health_anomaly + environmental_watch + safety_escalation",
+          "episodes_by_category": {
+            "corroborated_health_warning": {
+              "total_episodes": 1,
+              "matched_episodes": 1,
+              "unmatched_episodes": 0
+            },
+            "uncorroborated_health_anomaly": {
+              "total_episodes": 4,
+              "matched_episodes": 2,
+              "unmatched_episodes": 2
+            },
+            "environmental_watch": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            },
+            "safety_escalation": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            }
+          },
+          "matched_alert_episodes": 3,
+          "unmatched_alert_episodes": 2,
+          "false_alarm_burden_per_week": 0.45
+        },
+        "derived_performance_metrics": {
+          "event_sensitivity": 1.0,
+          "overall_alert_ppv": 0.6,
+          "corroborated_health_warning_ppv": 1.0,
+          "detection_delay_days": 1.0,
+          "useful_action_lead_days": -2.0,
+          "mean_scoring_latency_ms": 23.27,
+          "source_to_alert_operational_cadence_hours": 24.0
+        },
+        "episodes": [
+          {
+            "episode_id": "EP-HEAT-001",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "corroborated_health_warning",
+            "days_active": [
+              32,
+              33,
+              34,
+              35,
+              37,
+              38
+            ],
+            "first_issued_at": "2026-07-03T00:00:00+00:00",
+            "last_issued_at": "2026-07-09T00:00:00+00:00",
+            "alert_count": 6,
+            "peak_evidence_score": 90.0,
+            "is_matched": true,
+            "matched_reference_event_id": "REF-EVT-HEAT-GRADUAL-2026",
+            "matching_reason": "Episode onset 2026-07-03 falls within reference event matching window [2026-06-30 to 2026-07-09]."
+          },
+          {
+            "episode_id": "EP-HEAT-002",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "uncorroborated_health_anomaly",
+            "days_active": [
+              20,
+              21,
+              22
+            ],
+            "first_issued_at": "2026-06-21T00:00:00+00:00",
+            "last_issued_at": "2026-06-23T00:00:00+00:00",
+            "alert_count": 3,
+            "peak_evidence_score": 68.8,
+            "is_matched": false,
+            "matched_reference_event_id": null,
+            "matching_reason": "Episode onset 2026-06-21 occurred prior to reference event onset (Poisson baseline fluctuation / noise; false alarm)."
+          },
+          {
+            "episode_id": "EP-HEAT-003",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "uncorroborated_health_anomaly",
+            "days_active": [
+              27
+            ],
+            "first_issued_at": "2026-06-28T00:00:00+00:00",
+            "last_issued_at": "2026-06-28T00:00:00+00:00",
+            "alert_count": 1,
+            "peak_evidence_score": 56.2,
+            "is_matched": false,
+            "matched_reference_event_id": null,
+            "matching_reason": "Episode onset 2026-06-28 occurred prior to reference event onset (Poisson baseline fluctuation / noise; false alarm)."
+          },
+          {
+            "episode_id": "EP-HEAT-004",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "uncorroborated_health_anomaly",
+            "days_active": [
+              31
+            ],
+            "first_issued_at": "2026-07-02T00:00:00+00:00",
+            "last_issued_at": "2026-07-02T00:00:00+00:00",
+            "alert_count": 1,
+            "peak_evidence_score": 70.0,
+            "is_matched": true,
+            "matched_reference_event_id": "REF-EVT-HEAT-GRADUAL-2026",
+            "matching_reason": "Episode onset 2026-07-02 falls within reference event matching window [2026-06-30 to 2026-07-09]."
+          },
+          {
+            "episode_id": "EP-HEAT-005",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "uncorroborated_health_anomaly",
+            "days_active": [
+              36
+            ],
+            "first_issued_at": "2026-07-07T00:00:00+00:00",
+            "last_issued_at": "2026-07-07T00:00:00+00:00",
+            "alert_count": 1,
+            "peak_evidence_score": 70.0,
+            "is_matched": true,
+            "matched_reference_event_id": "REF-EVT-HEAT-GRADUAL-2026",
+            "matching_reason": "Episode onset 2026-07-07 falls within reference event matching window [2026-06-30 to 2026-07-09]."
+          }
+        ]
+      }
+    },
+    "heat-abrupt-extreme": {
+      "environmental_only": {
+        "policy": "environmental_only",
+        "scenario": "heat-abrupt-extreme",
+        "reference_ground_truth": {
+          "total_reference_events": 1,
+          "matched_reference_events": 1,
+          "missed_reference_events": 0,
+          "event_id": "REF-EVT-HEAT-ABRUPT-2026",
+          "onset_at": "2026-06-27T00:00:00+00:00",
+          "end_at": "2026-06-30T00:00:00+00:00",
+          "earliest_useful_action_at": "2026-06-26T00:00:00+00:00"
+        },
+        "chronological_splits": {
+          "burn_in_training_days": 14,
+          "held_out_evaluation_days": 31,
+          "total_simulation_days": 45,
+          "eligible_monitored_site_weeks": 4.43
+        },
+        "auditable_episode_reconciliation": {
+          "total_alert_episodes": 1,
+          "formula": "total_alert_episodes = corroborated_health_warning + uncorroborated_health_anomaly + environmental_watch + safety_escalation",
+          "episodes_by_category": {
+            "corroborated_health_warning": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            },
+            "uncorroborated_health_anomaly": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            },
+            "environmental_watch": {
+              "total_episodes": 1,
+              "matched_episodes": 1,
+              "unmatched_episodes": 0
+            },
+            "safety_escalation": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            }
+          },
+          "matched_alert_episodes": 1,
+          "unmatched_alert_episodes": 0,
+          "false_alarm_burden_per_week": 0.0
+        },
+        "derived_performance_metrics": {
+          "event_sensitivity": 1.0,
+          "overall_alert_ppv": 1.0,
+          "corroborated_health_warning_ppv": 0.0,
+          "detection_delay_days": 0.0,
+          "useful_action_lead_days": -1.0,
+          "mean_scoring_latency_ms": 25.42,
+          "source_to_alert_operational_cadence_hours": 24.0
+        },
+        "episodes": [
+          {
+            "episode_id": "EP-HEAT-001",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "environmental_watch",
+            "days_active": [
+              26,
+              27,
+              28,
+              29
+            ],
+            "first_issued_at": "2026-06-27T00:00:00+00:00",
+            "last_issued_at": "2026-06-30T00:00:00+00:00",
+            "alert_count": 4,
+            "peak_evidence_score": 50.0,
+            "is_matched": true,
+            "matched_reference_event_id": "REF-EVT-HEAT-ABRUPT-2026",
+            "matching_reason": "Episode onset 2026-06-27 falls within reference event matching window [2026-06-25 to 2026-06-30]."
+          }
+        ]
+      },
+      "health_only": {
+        "policy": "health_only",
+        "scenario": "heat-abrupt-extreme",
+        "reference_ground_truth": {
+          "total_reference_events": 1,
+          "matched_reference_events": 1,
+          "missed_reference_events": 0,
+          "event_id": "REF-EVT-HEAT-ABRUPT-2026",
+          "onset_at": "2026-06-27T00:00:00+00:00",
+          "end_at": "2026-06-30T00:00:00+00:00",
+          "earliest_useful_action_at": "2026-06-26T00:00:00+00:00"
+        },
+        "chronological_splits": {
+          "burn_in_training_days": 14,
+          "held_out_evaluation_days": 31,
+          "total_simulation_days": 45,
+          "eligible_monitored_site_weeks": 4.43
+        },
+        "auditable_episode_reconciliation": {
+          "total_alert_episodes": 4,
+          "formula": "total_alert_episodes = corroborated_health_warning + uncorroborated_health_anomaly + environmental_watch + safety_escalation",
+          "episodes_by_category": {
+            "corroborated_health_warning": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            },
+            "uncorroborated_health_anomaly": {
+              "total_episodes": 4,
+              "matched_episodes": 1,
+              "unmatched_episodes": 3
+            },
+            "environmental_watch": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            },
+            "safety_escalation": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            }
+          },
+          "matched_alert_episodes": 1,
+          "unmatched_alert_episodes": 3,
+          "false_alarm_burden_per_week": 0.68
+        },
+        "derived_performance_metrics": {
+          "event_sensitivity": 1.0,
+          "overall_alert_ppv": 0.25,
+          "corroborated_health_warning_ppv": 0.0,
+          "detection_delay_days": -12.0,
+          "useful_action_lead_days": 11.0,
+          "mean_scoring_latency_ms": 20.02,
+          "source_to_alert_operational_cadence_hours": 24.0
+        },
+        "episodes": [
+          {
+            "episode_id": "EP-HEAT-001",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "uncorroborated_health_anomaly",
+            "days_active": [
+              14,
+              16
+            ],
+            "first_issued_at": "2026-06-15T00:00:00+00:00",
+            "last_issued_at": "2026-06-17T00:00:00+00:00",
+            "alert_count": 2,
+            "peak_evidence_score": 60.0,
+            "is_matched": false,
+            "matched_reference_event_id": null,
+            "matching_reason": "Episode onset 2026-06-15 occurred prior to reference event onset (Poisson baseline fluctuation / noise; false alarm)."
+          },
+          {
+            "episode_id": "EP-HEAT-002",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "uncorroborated_health_anomaly",
+            "days_active": [
+              23
+            ],
+            "first_issued_at": "2026-06-24T00:00:00+00:00",
+            "last_issued_at": "2026-06-24T00:00:00+00:00",
+            "alert_count": 1,
+            "peak_evidence_score": 60.0,
+            "is_matched": false,
+            "matched_reference_event_id": null,
+            "matching_reason": "Episode onset 2026-06-24 occurred prior to reference event onset (Poisson baseline fluctuation / noise; false alarm)."
+          },
+          {
+            "episode_id": "EP-HEAT-003",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "uncorroborated_health_anomaly",
+            "days_active": [
+              26,
+              27,
+              28,
+              29
+            ],
+            "first_issued_at": "2026-06-27T00:00:00+00:00",
+            "last_issued_at": "2026-06-30T00:00:00+00:00",
+            "alert_count": 4,
+            "peak_evidence_score": 60.0,
+            "is_matched": true,
+            "matched_reference_event_id": "REF-EVT-HEAT-ABRUPT-2026",
+            "matching_reason": "Episode onset 2026-06-27 falls within reference event matching window [2026-06-25 to 2026-06-30]."
+          },
+          {
+            "episode_id": "EP-HEAT-004",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "uncorroborated_health_anomaly",
+            "days_active": [
+              37
+            ],
+            "first_issued_at": "2026-07-08T00:00:00+00:00",
+            "last_issued_at": "2026-07-08T00:00:00+00:00",
+            "alert_count": 1,
+            "peak_evidence_score": 60.0,
+            "is_matched": false,
+            "matched_reference_event_id": null,
+            "matching_reason": "Episode onset 2026-07-08 occurred after reference event end."
+          }
+        ]
+      },
+      "fused_corroborated": {
+        "policy": "fused_corroborated",
+        "scenario": "heat-abrupt-extreme",
+        "reference_ground_truth": {
+          "total_reference_events": 1,
+          "matched_reference_events": 1,
+          "missed_reference_events": 0,
+          "event_id": "REF-EVT-HEAT-ABRUPT-2026",
+          "onset_at": "2026-06-27T00:00:00+00:00",
+          "end_at": "2026-06-30T00:00:00+00:00",
+          "earliest_useful_action_at": "2026-06-26T00:00:00+00:00"
+        },
+        "chronological_splits": {
+          "burn_in_training_days": 14,
+          "held_out_evaluation_days": 31,
+          "total_simulation_days": 45,
+          "eligible_monitored_site_weeks": 4.43
+        },
+        "auditable_episode_reconciliation": {
+          "total_alert_episodes": 4,
+          "formula": "total_alert_episodes = corroborated_health_warning + uncorroborated_health_anomaly + environmental_watch + safety_escalation",
+          "episodes_by_category": {
+            "corroborated_health_warning": {
+              "total_episodes": 1,
+              "matched_episodes": 1,
+              "unmatched_episodes": 0
+            },
+            "uncorroborated_health_anomaly": {
+              "total_episodes": 3,
+              "matched_episodes": 0,
+              "unmatched_episodes": 3
+            },
+            "environmental_watch": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            },
+            "safety_escalation": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            }
+          },
+          "matched_alert_episodes": 1,
+          "unmatched_alert_episodes": 3,
+          "false_alarm_burden_per_week": 0.68
+        },
+        "derived_performance_metrics": {
+          "event_sensitivity": 1.0,
+          "overall_alert_ppv": 0.25,
+          "corroborated_health_warning_ppv": 1.0,
+          "detection_delay_days": 0.0,
+          "useful_action_lead_days": -1.0,
+          "mean_scoring_latency_ms": 21.06,
+          "source_to_alert_operational_cadence_hours": 24.0
+        },
+        "episodes": [
+          {
+            "episode_id": "EP-HEAT-001",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "corroborated_health_warning",
+            "days_active": [
+              26,
+              27,
+              28,
+              29
+            ],
+            "first_issued_at": "2026-06-27T00:00:00+00:00",
+            "last_issued_at": "2026-06-30T00:00:00+00:00",
+            "alert_count": 4,
+            "peak_evidence_score": 90.0,
+            "is_matched": true,
+            "matched_reference_event_id": "REF-EVT-HEAT-ABRUPT-2026",
+            "matching_reason": "Episode onset 2026-06-27 falls within reference event matching window [2026-06-25 to 2026-06-30]."
+          },
+          {
+            "episode_id": "EP-HEAT-002",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "uncorroborated_health_anomaly",
+            "days_active": [
+              14,
+              16
+            ],
+            "first_issued_at": "2026-06-15T00:00:00+00:00",
+            "last_issued_at": "2026-06-17T00:00:00+00:00",
+            "alert_count": 2,
+            "peak_evidence_score": 61.4,
+            "is_matched": false,
+            "matched_reference_event_id": null,
+            "matching_reason": "Episode onset 2026-06-15 occurred prior to reference event onset (Poisson baseline fluctuation / noise; false alarm)."
+          },
+          {
+            "episode_id": "EP-HEAT-003",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "uncorroborated_health_anomaly",
+            "days_active": [
+              23
+            ],
+            "first_issued_at": "2026-06-24T00:00:00+00:00",
+            "last_issued_at": "2026-06-24T00:00:00+00:00",
+            "alert_count": 1,
+            "peak_evidence_score": 60.2,
+            "is_matched": false,
+            "matched_reference_event_id": null,
+            "matching_reason": "Episode onset 2026-06-24 occurred prior to reference event onset (Poisson baseline fluctuation / noise; false alarm)."
+          },
+          {
+            "episode_id": "EP-HEAT-004",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "uncorroborated_health_anomaly",
+            "days_active": [
+              37
+            ],
+            "first_issued_at": "2026-07-08T00:00:00+00:00",
+            "last_issued_at": "2026-07-08T00:00:00+00:00",
+            "alert_count": 1,
+            "peak_evidence_score": 59.5,
+            "is_matched": false,
+            "matched_reference_event_id": null,
+            "matching_reason": "Episode onset 2026-07-08 occurred after reference event end."
+          }
+        ]
+      }
+    },
+    "spurious-health-spike": {
+      "environmental_only": {
+        "policy": "environmental_only",
+        "scenario": "spurious-health-spike",
+        "reference_ground_truth": {
+          "total_reference_events": 0,
+          "matched_reference_events": 0,
+          "missed_reference_events": 0,
+          "event_id": null,
+          "onset_at": null,
+          "end_at": null,
+          "earliest_useful_action_at": null
+        },
+        "chronological_splits": {
+          "burn_in_training_days": 14,
+          "held_out_evaluation_days": 31,
+          "total_simulation_days": 45,
+          "eligible_monitored_site_weeks": 4.43
+        },
+        "auditable_episode_reconciliation": {
+          "total_alert_episodes": 0,
+          "formula": "total_alert_episodes = corroborated_health_warning + uncorroborated_health_anomaly + environmental_watch + safety_escalation",
+          "episodes_by_category": {
+            "corroborated_health_warning": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            },
+            "uncorroborated_health_anomaly": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            },
+            "environmental_watch": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            },
+            "safety_escalation": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            }
+          },
+          "matched_alert_episodes": 0,
+          "unmatched_alert_episodes": 0,
+          "false_alarm_burden_per_week": 0.0
+        },
+        "derived_performance_metrics": {
+          "event_sensitivity": null,
+          "overall_alert_ppv": 0.0,
+          "corroborated_health_warning_ppv": 0.0,
+          "detection_delay_days": null,
+          "useful_action_lead_days": null,
+          "mean_scoring_latency_ms": 21.19,
+          "source_to_alert_operational_cadence_hours": 24.0
+        },
+        "episodes": []
+      },
+      "health_only": {
+        "policy": "health_only",
+        "scenario": "spurious-health-spike",
+        "reference_ground_truth": {
+          "total_reference_events": 0,
+          "matched_reference_events": 0,
+          "missed_reference_events": 0,
+          "event_id": null,
+          "onset_at": null,
+          "end_at": null,
+          "earliest_useful_action_at": null
+        },
+        "chronological_splits": {
+          "burn_in_training_days": 14,
+          "held_out_evaluation_days": 31,
+          "total_simulation_days": 45,
+          "eligible_monitored_site_weeks": 4.43
+        },
+        "auditable_episode_reconciliation": {
+          "total_alert_episodes": 1,
+          "formula": "total_alert_episodes = corroborated_health_warning + uncorroborated_health_anomaly + environmental_watch + safety_escalation",
+          "episodes_by_category": {
+            "corroborated_health_warning": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            },
+            "uncorroborated_health_anomaly": {
+              "total_episodes": 1,
+              "matched_episodes": 0,
+              "unmatched_episodes": 1
+            },
+            "environmental_watch": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            },
+            "safety_escalation": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            }
+          },
+          "matched_alert_episodes": 0,
+          "unmatched_alert_episodes": 1,
+          "false_alarm_burden_per_week": 0.23
+        },
+        "derived_performance_metrics": {
+          "event_sensitivity": null,
+          "overall_alert_ppv": 0.0,
+          "corroborated_health_warning_ppv": 0.0,
+          "detection_delay_days": null,
+          "useful_action_lead_days": null,
+          "mean_scoring_latency_ms": 21.1,
+          "source_to_alert_operational_cadence_hours": 24.0
+        },
+        "episodes": [
+          {
+            "episode_id": "EP-SPUR-001",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "uncorroborated_health_anomaly",
+            "days_active": [
+              21,
+              22,
+              23
+            ],
+            "first_issued_at": "2026-06-22T00:00:00+00:00",
+            "last_issued_at": "2026-06-24T00:00:00+00:00",
+            "alert_count": 3,
+            "peak_evidence_score": 60.0,
+            "is_matched": false,
+            "matched_reference_event_id": null,
+            "matching_reason": "No ground-truth reference event in scenario (null scenario; false positive)."
+          }
+        ]
+      },
+      "fused_corroborated": {
+        "policy": "fused_corroborated",
+        "scenario": "spurious-health-spike",
+        "reference_ground_truth": {
+          "total_reference_events": 0,
+          "matched_reference_events": 0,
+          "missed_reference_events": 0,
+          "event_id": null,
+          "onset_at": null,
+          "end_at": null,
+          "earliest_useful_action_at": null
+        },
+        "chronological_splits": {
+          "burn_in_training_days": 14,
+          "held_out_evaluation_days": 31,
+          "total_simulation_days": 45,
+          "eligible_monitored_site_weeks": 4.43
+        },
+        "auditable_episode_reconciliation": {
+          "total_alert_episodes": 1,
+          "formula": "total_alert_episodes = corroborated_health_warning + uncorroborated_health_anomaly + environmental_watch + safety_escalation",
+          "episodes_by_category": {
+            "corroborated_health_warning": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            },
+            "uncorroborated_health_anomaly": {
+              "total_episodes": 1,
+              "matched_episodes": 0,
+              "unmatched_episodes": 1
+            },
+            "environmental_watch": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            },
+            "safety_escalation": {
+              "total_episodes": 0,
+              "matched_episodes": 0,
+              "unmatched_episodes": 0
+            }
+          },
+          "matched_alert_episodes": 0,
+          "unmatched_alert_episodes": 1,
+          "false_alarm_burden_per_week": 0.23
+        },
+        "derived_performance_metrics": {
+          "event_sensitivity": null,
+          "overall_alert_ppv": 0.0,
+          "corroborated_health_warning_ppv": 0.0,
+          "detection_delay_days": null,
+          "useful_action_lead_days": null,
+          "mean_scoring_latency_ms": 21.3,
+          "source_to_alert_operational_cadence_hours": 24.0
+        },
+        "episodes": [
+          {
+            "episode_id": "EP-SPUR-001",
+            "tenant_id": "greenfield_industries",
+            "hazard": "heat_illness",
+            "category": "uncorroborated_health_anomaly",
+            "days_active": [
+              21,
+              22,
+              23
+            ],
+            "first_issued_at": "2026-06-22T00:00:00+00:00",
+            "last_issued_at": "2026-06-24T00:00:00+00:00",
+            "alert_count": 3,
+            "peak_evidence_score": 70.0,
+            "is_matched": false,
+            "matched_reference_event_id": null,
+            "matching_reason": "No ground-truth reference event in scenario (null scenario; false positive)."
+          }
+        ]
+      }
+    }
+  },
+  "policy_comparisons": {
+    "environmental_only": {
+      "total_alert_episodes_across_scenarios": 2,
+      "matched_episodes": 2,
+      "unmatched_episodes": 0,
+      "false_alarms_in_null_scenario": 0,
+      "mean_detection_delay_days": 0.5,
+      "tradeoff_summary": "High sensitivity with zero delay, but alarms continuously on weather alone without workforce corroboration."
+    },
+    "health_only": {
+      "total_alert_episodes_across_scenarios": 8,
+      "matched_episodes": 2,
+      "unmatched_episodes": 6,
+      "false_alarms_in_null_scenario": 1,
+      "mean_detection_delay_days": -11.5,
+      "tradeoff_summary": "Detects clinical surges, but vulnerable to non-environmental noise (highest false alarm rate in null scenario)."
+    },
+    "fused_corroborated": {
+      "total_alert_episodes_across_scenarios": 10,
+      "matched_episodes": 4,
+      "unmatched_episodes": 6,
+      "false_alarms_in_null_scenario": 1,
+      "mean_detection_delay_days": 0.5,
+      "tradeoff_summary": "Filters spurious health spikes and produces specific warnings, balancing timeliness and positive predictive value."
+    }
+  }
+}
