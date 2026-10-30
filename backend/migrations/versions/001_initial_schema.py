@@ -259,7 +259,6 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     )
     op.create_index("ix_signal_record_lookup", "signal_records", ["tenant_id", "source_id", "metric_code", "period_start"])
-    op.create_unique_constraint("uq_signal_records_idempotency", "signal_records", ["tenant_id", "source_id", "metric_code", "period_start", "record_version"])
     op.create_index("ix_signal_record_geo", "signal_records", ["tenant_id", "geography_id", "period_start"])
 
     op.create_table(

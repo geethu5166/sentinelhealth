@@ -1,7 +1,7 @@
-# SentinelHealth Frozen Dependencies
-# Commit: 73a5c4ab3e2a59e67372a921c30667f95c7809ec
+# SentinelHealth Environment Snapshot
+# NOTE: This is an environment snapshot derived from `pip freeze`, not a verified lockfile computed by a dependency solver.
 # Runtime: Python 3.14.7 (WSL Kali) / Python 3.11 (Windows x86_64)
-# Database: PostgreSQL 18.0 + PostGIS 3.6.4
+# Database: PostgreSQL 18.0 + PostGIS 3.6.4 (Port 5433)
 
 fastapi==0.115.6
 uvicorn[standard]==0.34.0

@@ -173,7 +173,7 @@ class IngestionError(Base, UUIDMixin):
 class SignalRecord(Base, UUIDMixin):
     __tablename__ = "signal_records"
     __table_args__ = (
-        UniqueConstraint("tenant_id", "source_id", "metric_code", "period_start", "record_version", name="uq_signal_records_idempotency"),
+        UniqueConstraint("tenant_id", "source_id", "metric_code", "period_start", "geography_id", "workplace_id", "record_version", name="uq_signal_records_idempotency"),
         Index("ix_signal_tenant_source_metric_period", "tenant_id", "source_id", "metric_code", "period_start"),
         Index("ix_signal_tenant_geography", "tenant_id", "geography_id"),
         Index("ix_signal_tenant_workplace", "tenant_id", "workplace_id"),

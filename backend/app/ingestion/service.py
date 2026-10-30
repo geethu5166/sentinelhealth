@@ -39,7 +39,7 @@ class IngestionService:
         records: List[NormalizedRecord],
         idempotency_key: str,
     ) -> IngestionRun:
-        # Check idempotency
+        # Check idempotency prior to execution
         existing_run_res = await self.session.execute(
             select(IngestionRun).where(IngestionRun.idempotency_key == idempotency_key)
         )
@@ -58,8 +58,18 @@ class IngestionService:
             started_at=datetime.now(timezone.utc),
             idempotency_key=idempotency_key,
         )
-        self.session.add(run)
-        await self.session.flush()
+        try:
+            self.session.add(run)
+            await self.session.flush()
+        except Exception:
+            await self.session.rollback()
+            existing_run_res = await self.session.execute(
+                select(IngestionRun).where(IngestionRun.idempotency_key == idempotency_key)
+            )
+            existing_run = existing_run_res.scalar_one_or_none()
+            if existing_run:
+                return existing_run
+            raise
 
         accepted_count = 0
         rejected_count = 0

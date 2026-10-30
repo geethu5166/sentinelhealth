@@ -52,3 +52,4 @@ for idx, ep in enumerate(episodes, 1):
     last = ep[-1]
     classes = set(x["class"] for x in ep)
     print(f"Episode {idx}: Days {first['day']}-{last['day']} ({first['sim'].strftime('%Y-%m-%d')} to {last['sim'].strftime('%Y-%m-%d')}) | Classes: {classes} | Alerts in ep: {len(ep)}")
+
