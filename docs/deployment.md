@@ -1,7 +1,7 @@
 # SentinelHealth Deployment Guide: Local & AWS Pilot
 
 ## Operational Acceptance Environment Snapshot
-- **Repository Commit**: `73a5c4ab3e2a59e67372a921c30667f95c7809ec`
+- **Repository Commit**: `808c1238d33010b9ca3fe07ecce0a6a4c28f3223`
 - **Database Engine**: PostgreSQL 18.0 with PostGIS 3.6.4 extension
 - **Database Network Binding**: `listen_addresses = 'localhost,127.0.0.1'` (port 5433)
 - **Database Migration Revision**: `001_initial_schema` (applies all tables, invoker-security views, RLS policies, and unique idempotency constraints)
