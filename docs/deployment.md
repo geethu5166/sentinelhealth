@@ -1,5 +1,16 @@
 # SentinelHealth Deployment Guide: Local & AWS Pilot
 
+## Operational Acceptance Environment Snapshot
+- **Repository Commit**: `73a5c4ab3e2a59e67372a921c30667f95c7809ec`
+- **Database Engine**: PostgreSQL 18.0 with PostGIS 3.6.4 extension
+- **Database Network Binding**: `listen_addresses = 'localhost,127.0.0.1'` (port 5433)
+- **Database Migration Revision**: `001_initial_schema` (applies all tables, invoker-security views, RLS policies, and unique idempotency constraints)
+- **Application Roles**:
+  - `sentinel_migrator`: DDL owner, sets up schemas and grants table permissions
+  - `sentinel_app`: Runtime application role configured with `NOBYPASSRLS`
+- **Backend Runtime**: Python 3.14.7 (WSL Kali) / Python 3.11.9 (Windows Host)
+- **Frontend Runtime**: Node.js v22.12.0, Vite 5.4.21, React 18.3.1, Vitest 2.1.9
+
 ## 1. Local Development (Docker Compose)
 Prerequisites: Docker Engine 24+, Docker Compose v2.20+, 4GB available RAM.
 
