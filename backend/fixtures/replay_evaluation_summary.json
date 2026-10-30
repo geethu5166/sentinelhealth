@@ -1,23 +1,39 @@
 {
   "evaluation_title": "SentinelHealth Auditable Replay Evaluation Suite",
-  "generated_at": "2026-10-30T18:24:26.405217+00:00",
+  "generated_at": "2026-10-30T18:37:58.839488+00:00",
   "disclaimer": "This prototype has not undergone clinical validation, production security assessment or jurisdiction-specific legal/compliance review.",
-  "cdc_evaluation_rules": [
-    "Detection delay is computed strictly from the first eligible alert that matches the ground-truth event window.",
-    "Pre-event false alarms (spurious baseline Poisson fluctuations) are reported separately and NEVER credited as early warning lead time.",
-    "If an event has zero matched alerts, detection delay is reported as null/unavailable (event missed), NOT zero.",
-    "Timestamps for observation period end, source availability, ingestion, scoring, alert issue, and task acknowledgment are tracked separately without adding batch cadence blindly."
+  "cdc_evaluation_guidelines": [
+    "Alerts receive early-warning credit only when they satisfy the predefined event-matching and useful-action criteria. Unmatched alerts are reported separately.",
+    "Predefined criteria specify eligible pre-onset lead window (<= 2 days prior to onset), matching hazard, and matching geography before evaluation.",
+    "Forecast replay inputs must strictly reflect forecasts available at decision time without lookahead.",
+    "Observation-time detection delay (data date) and issue-time detection delay (operational alert dispatch timestamp) are evaluated and reported separately.",
+    "Direct latency between source availability and alert issuance is calculated exactly (e.g. 10m 2s), without conflating daily batch cadence.",
+    "Environmental-only policy produces an environmental exposure watch without health corroboration.",
+    "In a null scenario with no reference event, unmatched alerts are reported as false alarms without claiming a true event was rejected."
   ],
   "scenario_evaluations": {
     "heat-gradual": {
       "environmental_only": {
         "policy": "environmental_only",
         "scenario": "heat-gradual",
+        "scenario_metadata": {
+          "generator_version": "0.2.0",
+          "seed": 42,
+          "commit": "ac86ff5",
+          "configuration": {
+            "burn_in_days": 14,
+            "temp_threshold_c": 39.0,
+            "smoothing_factor": 0.3,
+            "control_limit_sigma": 2.5,
+            "eligible_pre_onset_lead_days": 2
+          }
+        },
         "reference_ground_truth": {
           "total_reference_events": 1,
           "matched_reference_events": 1,
           "missed_reference_events": 0,
           "event_id": "REF-EVT-HEAT-GRADUAL-2026",
+          "hazard": "heat_illness",
           "onset_at": "2026-07-02T00:00:00+00:00",
           "end_at": "2026-07-09T00:00:00+00:00",
           "earliest_useful_action_at": "2026-07-01T00:00:00+00:00"
@@ -61,22 +77,38 @@
           "event_sensitivity": 1.0,
           "overall_alert_ppv": 1.0,
           "corroborated_health_warning_ppv": 0.0,
-          "detection_delay_days": 1.0,
-          "detection_delay_status": "post_onset_detection",
-          "useful_action_lead_days": -2.0,
-          "first_matched_alert_timestamps": {
-            "observation_period_end": "2026-07-03T00:00:00+00:00",
-            "source_available_at": "2026-07-03T02:00:00+00:00",
-            "ingested_at": "2026-07-03T02:15:00+00:00",
-            "scored_at": "2026-07-03T02:15:00.019716+00:00",
-            "alert_issued_at": "2026-07-03T02:15:00.024716+00:00",
-            "task_acknowledged_at": "2026-07-03T04:00:00+00:00"
-          },
+          "observation_time_detection_delay_days": 1.0,
+          "observation_time_useful_lead_days": -2.0,
+          "observation_delay_status": "post_onset_detection",
+          "issue_time_detection_delay_days": 2.0104,
+          "issue_time_useful_lead_days": -3.0104,
+          "issue_delay_status": "post_onset_detection",
           "pipeline_latencies": {
-            "scoring_compute_latency_ms": 139.87,
-            "source_to_alert_pipeline_latency_minutes": 15.0,
-            "observation_turnaround_hours": 2.25,
+            "source_available_to_issue_seconds": 602.0,
+            "source_available_to_issue_minutes": 10.03,
+            "observation_period_end_to_issue_seconds": 903.0,
+            "observation_period_end_to_issue_minutes": 15.05,
+            "scoring_compute_latency_ms": 146.32,
             "data_transmission_cadence_hours": 24.0
+          },
+          "first_matched_alert_timestamps": {
+            "observation_date": "2026-07-03",
+            "observation_period_end": "2026-07-03T23:59:59+00:00",
+            "source_available_at": "2026-07-04T00:05:00+00:00",
+            "ingested_at": "2026-07-04T00:12:30+00:00",
+            "scored_at": "2026-07-04T00:15:00+00:00",
+            "alert_issued_at": "2026-07-04T00:15:02+00:00",
+            "task_acknowledged_at": "2026-07-04T02:30:00+00:00",
+            "provenance_labels": {
+              "observation_date": "synthetic_scenario_date",
+              "observation_period_end": "assumed_daily_cutoff_235959",
+              "source_available_at": "assumed_upstream_publication_latency",
+              "ingested_at": "assumed_batch_ingestion_schedule",
+              "scored_at": "assumed_compute_scheduling_window",
+              "alert_issued_at": "assumed_notification_dispatch",
+              "task_acknowledged_at": "assumed_operator_response",
+              "scoring_compute_ms": "measured_runtime_latency"
+            }
           }
         },
         "episodes": [
@@ -93,24 +125,38 @@
               37,
               38
             ],
-            "first_issued_at": "2026-07-03T00:00:00+00:00",
-            "last_issued_at": "2026-07-09T00:00:00+00:00",
+            "first_issued_at": "2026-07-04T00:15:02+00:00",
+            "last_issued_at": "2026-07-10T00:15:02+00:00",
+            "observation_first_date": "2026-07-03",
             "alert_count": 6,
             "peak_evidence_score": 50.0,
             "is_matched": true,
             "matched_reference_event_id": "REF-EVT-HEAT-GRADUAL-2026",
-            "matching_reason": "Matched reference event: first alert on Day 32 (2026-07-03) falls within eligible event window [2026-07-01 to 2026-07-09]."
+            "matching_reason": "Matched post-onset detection: first alert on Day 32 (2026-07-03) occurred 1 days after onset within active event duration."
           }
         ]
       },
       "health_only": {
         "policy": "health_only",
         "scenario": "heat-gradual",
+        "scenario_metadata": {
+          "generator_version": "0.2.0",
+          "seed": 42,
+          "commit": "ac86ff5",
+          "configuration": {
+            "burn_in_days": 14,
+            "temp_threshold_c": 39.0,
+            "smoothing_factor": 0.3,
+            "control_limit_sigma": 2.5,
+            "eligible_pre_onset_lead_days": 2
+          }
+        },
         "reference_ground_truth": {
           "total_reference_events": 1,
           "matched_reference_events": 1,
           "missed_reference_events": 0,
           "event_id": "REF-EVT-HEAT-GRADUAL-2026",
+          "hazard": "heat_illness",
           "onset_at": "2026-07-02T00:00:00+00:00",
           "end_at": "2026-07-09T00:00:00+00:00",
           "earliest_useful_action_at": "2026-07-01T00:00:00+00:00"
@@ -154,22 +200,38 @@
           "event_sensitivity": 1.0,
           "overall_alert_ppv": 0.3333,
           "corroborated_health_warning_ppv": 0.0,
-          "detection_delay_days": 0.0,
-          "detection_delay_status": "onset_day_detection",
-          "useful_action_lead_days": -1.0,
-          "first_matched_alert_timestamps": {
-            "observation_period_end": "2026-07-02T00:00:00+00:00",
-            "source_available_at": "2026-07-02T02:00:00+00:00",
-            "ingested_at": "2026-07-02T02:15:00+00:00",
-            "scored_at": "2026-07-02T02:15:00.015333+00:00",
-            "alert_issued_at": "2026-07-02T02:15:00.020333+00:00",
-            "task_acknowledged_at": "2026-07-02T04:00:00+00:00"
-          },
+          "observation_time_detection_delay_days": 0.0,
+          "observation_time_useful_lead_days": -1.0,
+          "observation_delay_status": "onset_day_detection",
+          "issue_time_detection_delay_days": 1.0104,
+          "issue_time_useful_lead_days": -2.0104,
+          "issue_delay_status": "post_onset_detection",
           "pipeline_latencies": {
-            "scoring_compute_latency_ms": 22.07,
-            "source_to_alert_pipeline_latency_minutes": 15.0,
-            "observation_turnaround_hours": 2.25,
+            "source_available_to_issue_seconds": 602.0,
+            "source_available_to_issue_minutes": 10.03,
+            "observation_period_end_to_issue_seconds": 903.0,
+            "observation_period_end_to_issue_minutes": 15.05,
+            "scoring_compute_latency_ms": 35.34,
             "data_transmission_cadence_hours": 24.0
+          },
+          "first_matched_alert_timestamps": {
+            "observation_date": "2026-07-02",
+            "observation_period_end": "2026-07-02T23:59:59+00:00",
+            "source_available_at": "2026-07-03T00:05:00+00:00",
+            "ingested_at": "2026-07-03T00:12:30+00:00",
+            "scored_at": "2026-07-03T00:15:00+00:00",
+            "alert_issued_at": "2026-07-03T00:15:02+00:00",
+            "task_acknowledged_at": "2026-07-03T02:30:00+00:00",
+            "provenance_labels": {
+              "observation_date": "synthetic_scenario_date",
+              "observation_period_end": "assumed_daily_cutoff_235959",
+              "source_available_at": "assumed_upstream_publication_latency",
+              "ingested_at": "assumed_batch_ingestion_schedule",
+              "scored_at": "assumed_compute_scheduling_window",
+              "alert_issued_at": "assumed_notification_dispatch",
+              "task_acknowledged_at": "assumed_operator_response",
+              "scoring_compute_ms": "measured_runtime_latency"
+            }
           }
         },
         "episodes": [
@@ -183,13 +245,14 @@
               21,
               22
             ],
-            "first_issued_at": "2026-06-21T00:00:00+00:00",
-            "last_issued_at": "2026-06-23T00:00:00+00:00",
+            "first_issued_at": "2026-06-22T00:15:02+00:00",
+            "last_issued_at": "2026-06-24T00:15:02+00:00",
+            "observation_first_date": "2026-06-21",
             "alert_count": 3,
             "peak_evidence_score": 60.0,
             "is_matched": false,
             "matched_reference_event_id": null,
-            "matching_reason": "Unmatched false alarm: alert issued on Day 20 (2026-06-21) preceded event onset by 11 days (Poisson baseline fluctuation; not early warning)."
+            "matching_reason": "Unmatched alert (false alarm): alert on Day 20 (2026-06-21) preceded event onset by 11 days, exceeding the 2-day eligible lead window."
           },
           {
             "episode_id": "EP-HEAT-002",
@@ -199,13 +262,14 @@
             "days_active": [
               27
             ],
-            "first_issued_at": "2026-06-28T00:00:00+00:00",
-            "last_issued_at": "2026-06-28T00:00:00+00:00",
+            "first_issued_at": "2026-06-29T00:15:02+00:00",
+            "last_issued_at": "2026-06-29T00:15:02+00:00",
+            "observation_first_date": "2026-06-28",
             "alert_count": 1,
             "peak_evidence_score": 60.0,
             "is_matched": false,
             "matched_reference_event_id": null,
-            "matching_reason": "Unmatched false alarm: alert issued on Day 27 (2026-06-28) preceded event onset by 4 days (Poisson baseline fluctuation; not early warning)."
+            "matching_reason": "Unmatched alert (false alarm): alert on Day 27 (2026-06-28) preceded event onset by 4 days, exceeding the 2-day eligible lead window."
           },
           {
             "episode_id": "EP-HEAT-003",
@@ -222,24 +286,38 @@
               37,
               38
             ],
-            "first_issued_at": "2026-07-02T00:00:00+00:00",
-            "last_issued_at": "2026-07-09T00:00:00+00:00",
+            "first_issued_at": "2026-07-03T00:15:02+00:00",
+            "last_issued_at": "2026-07-10T00:15:02+00:00",
+            "observation_first_date": "2026-07-02",
             "alert_count": 8,
             "peak_evidence_score": 60.0,
             "is_matched": true,
             "matched_reference_event_id": "REF-EVT-HEAT-GRADUAL-2026",
-            "matching_reason": "Matched reference event: first alert on Day 31 (2026-07-02) falls within eligible event window [2026-07-01 to 2026-07-09]."
+            "matching_reason": "Matched onset-day detection: first alert on Day 31 (2026-07-02) coincides with ground-truth event onset."
           }
         ]
       },
       "fused_corroborated": {
         "policy": "fused_corroborated",
         "scenario": "heat-gradual",
+        "scenario_metadata": {
+          "generator_version": "0.2.0",
+          "seed": 42,
+          "commit": "ac86ff5",
+          "configuration": {
+            "burn_in_days": 14,
+            "temp_threshold_c": 39.0,
+            "smoothing_factor": 0.3,
+            "control_limit_sigma": 2.5,
+            "eligible_pre_onset_lead_days": 2
+          }
+        },
         "reference_ground_truth": {
           "total_reference_events": 1,
           "matched_reference_events": 1,
           "missed_reference_events": 0,
           "event_id": "REF-EVT-HEAT-GRADUAL-2026",
+          "hazard": "heat_illness",
           "onset_at": "2026-07-02T00:00:00+00:00",
           "end_at": "2026-07-09T00:00:00+00:00",
           "earliest_useful_action_at": "2026-07-01T00:00:00+00:00"
@@ -283,22 +361,38 @@
           "event_sensitivity": 1.0,
           "overall_alert_ppv": 0.6,
           "corroborated_health_warning_ppv": 1.0,
-          "detection_delay_days": 1.0,
-          "detection_delay_status": "post_onset_detection",
-          "useful_action_lead_days": -2.0,
-          "first_matched_alert_timestamps": {
-            "observation_period_end": "2026-07-02T00:00:00+00:00",
-            "source_available_at": "2026-07-02T02:00:00+00:00",
-            "ingested_at": "2026-07-02T02:15:00+00:00",
-            "scored_at": "2026-07-02T02:15:00.012062+00:00",
-            "alert_issued_at": "2026-07-02T02:15:00.017062+00:00",
-            "task_acknowledged_at": "2026-07-02T04:00:00+00:00"
-          },
+          "observation_time_detection_delay_days": 1.0,
+          "observation_time_useful_lead_days": -2.0,
+          "observation_delay_status": "post_onset_detection",
+          "issue_time_detection_delay_days": 2.0104,
+          "issue_time_useful_lead_days": -3.0104,
+          "issue_delay_status": "post_onset_detection",
           "pipeline_latencies": {
-            "scoring_compute_latency_ms": 16.86,
-            "source_to_alert_pipeline_latency_minutes": 15.0,
-            "observation_turnaround_hours": 2.25,
+            "source_available_to_issue_seconds": 602.0,
+            "source_available_to_issue_minutes": 10.03,
+            "observation_period_end_to_issue_seconds": 903.0,
+            "observation_period_end_to_issue_minutes": 15.05,
+            "scoring_compute_latency_ms": 27.0,
             "data_transmission_cadence_hours": 24.0
+          },
+          "first_matched_alert_timestamps": {
+            "observation_date": "2026-07-03",
+            "observation_period_end": "2026-07-03T23:59:59+00:00",
+            "source_available_at": "2026-07-04T00:05:00+00:00",
+            "ingested_at": "2026-07-04T00:12:30+00:00",
+            "scored_at": "2026-07-04T00:15:00+00:00",
+            "alert_issued_at": "2026-07-04T00:15:02+00:00",
+            "task_acknowledged_at": "2026-07-04T02:30:00+00:00",
+            "provenance_labels": {
+              "observation_date": "synthetic_scenario_date",
+              "observation_period_end": "assumed_daily_cutoff_235959",
+              "source_available_at": "assumed_upstream_publication_latency",
+              "ingested_at": "assumed_batch_ingestion_schedule",
+              "scored_at": "assumed_compute_scheduling_window",
+              "alert_issued_at": "assumed_notification_dispatch",
+              "task_acknowledged_at": "assumed_operator_response",
+              "scoring_compute_ms": "measured_runtime_latency"
+            }
           }
         },
         "episodes": [
@@ -315,13 +409,14 @@
               37,
               38
             ],
-            "first_issued_at": "2026-07-03T00:00:00+00:00",
-            "last_issued_at": "2026-07-09T00:00:00+00:00",
+            "first_issued_at": "2026-07-04T00:15:02+00:00",
+            "last_issued_at": "2026-07-10T00:15:02+00:00",
+            "observation_first_date": "2026-07-03",
             "alert_count": 6,
             "peak_evidence_score": 90.0,
             "is_matched": true,
             "matched_reference_event_id": "REF-EVT-HEAT-GRADUAL-2026",
-            "matching_reason": "Matched reference event: first alert on Day 32 (2026-07-03) falls within eligible event window [2026-07-01 to 2026-07-09]."
+            "matching_reason": "Matched post-onset detection: first alert on Day 32 (2026-07-03) occurred 1 days after onset within active event duration."
           },
           {
             "episode_id": "EP-HEAT-002",
@@ -333,13 +428,14 @@
               21,
               22
             ],
-            "first_issued_at": "2026-06-21T00:00:00+00:00",
-            "last_issued_at": "2026-06-23T00:00:00+00:00",
+            "first_issued_at": "2026-06-22T00:15:02+00:00",
+            "last_issued_at": "2026-06-24T00:15:02+00:00",
+            "observation_first_date": "2026-06-21",
             "alert_count": 3,
             "peak_evidence_score": 68.8,
             "is_matched": false,
             "matched_reference_event_id": null,
-            "matching_reason": "Unmatched false alarm: alert issued on Day 20 (2026-06-21) preceded event onset by 11 days (Poisson baseline fluctuation; not early warning)."
+            "matching_reason": "Unmatched alert (false alarm): alert on Day 20 (2026-06-21) preceded event onset by 11 days, exceeding the 2-day eligible lead window."
           },
           {
             "episode_id": "EP-HEAT-003",
@@ -349,13 +445,14 @@
             "days_active": [
               27
             ],
-            "first_issued_at": "2026-06-28T00:00:00+00:00",
-            "last_issued_at": "2026-06-28T00:00:00+00:00",
+            "first_issued_at": "2026-06-29T00:15:02+00:00",
+            "last_issued_at": "2026-06-29T00:15:02+00:00",
+            "observation_first_date": "2026-06-28",
             "alert_count": 1,
             "peak_evidence_score": 56.2,
             "is_matched": false,
             "matched_reference_event_id": null,
-            "matching_reason": "Unmatched false alarm: alert issued on Day 27 (2026-06-28) preceded event onset by 4 days (Poisson baseline fluctuation; not early warning)."
+            "matching_reason": "Unmatched alert (false alarm): alert on Day 27 (2026-06-28) preceded event onset by 4 days, exceeding the 2-day eligible lead window."
           },
           {
             "episode_id": "EP-HEAT-004",
@@ -365,13 +462,14 @@
             "days_active": [
               31
             ],
-            "first_issued_at": "2026-07-02T00:00:00+00:00",
-            "last_issued_at": "2026-07-02T00:00:00+00:00",
+            "first_issued_at": "2026-07-03T00:15:02+00:00",
+            "last_issued_at": "2026-07-03T00:15:02+00:00",
+            "observation_first_date": "2026-07-02",
             "alert_count": 1,
             "peak_evidence_score": 70.0,
             "is_matched": true,
             "matched_reference_event_id": "REF-EVT-HEAT-GRADUAL-2026",
-            "matching_reason": "Matched reference event: first alert on Day 31 (2026-07-02) falls within eligible event window [2026-07-01 to 2026-07-09]."
+            "matching_reason": "Matched onset-day detection: first alert on Day 31 (2026-07-02) coincides with ground-truth event onset."
           },
           {
             "episode_id": "EP-HEAT-005",
@@ -381,13 +479,14 @@
             "days_active": [
               36
             ],
-            "first_issued_at": "2026-07-07T00:00:00+00:00",
-            "last_issued_at": "2026-07-07T00:00:00+00:00",
+            "first_issued_at": "2026-07-08T00:15:02+00:00",
+            "last_issued_at": "2026-07-08T00:15:02+00:00",
+            "observation_first_date": "2026-07-07",
             "alert_count": 1,
             "peak_evidence_score": 70.0,
             "is_matched": true,
             "matched_reference_event_id": "REF-EVT-HEAT-GRADUAL-2026",
-            "matching_reason": "Matched reference event: first alert on Day 36 (2026-07-07) falls within eligible event window [2026-07-01 to 2026-07-09]."
+            "matching_reason": "Matched post-onset detection: first alert on Day 36 (2026-07-07) occurred 5 days after onset within active event duration."
           }
         ]
       }
@@ -396,11 +495,24 @@
       "environmental_only": {
         "policy": "environmental_only",
         "scenario": "heat-abrupt-extreme",
+        "scenario_metadata": {
+          "generator_version": "0.2.0",
+          "seed": 101,
+          "commit": "ac86ff5",
+          "configuration": {
+            "burn_in_days": 14,
+            "temp_threshold_c": 39.0,
+            "smoothing_factor": 0.3,
+            "control_limit_sigma": 2.5,
+            "eligible_pre_onset_lead_days": 2
+          }
+        },
         "reference_ground_truth": {
           "total_reference_events": 1,
           "matched_reference_events": 1,
           "missed_reference_events": 0,
           "event_id": "REF-EVT-HEAT-ABRUPT-2026",
+          "hazard": "heat_illness",
           "onset_at": "2026-06-27T00:00:00+00:00",
           "end_at": "2026-06-30T00:00:00+00:00",
           "earliest_useful_action_at": "2026-06-26T00:00:00+00:00"
@@ -444,22 +556,38 @@
           "event_sensitivity": 1.0,
           "overall_alert_ppv": 1.0,
           "corroborated_health_warning_ppv": 0.0,
-          "detection_delay_days": 0.0,
-          "detection_delay_status": "onset_day_detection",
-          "useful_action_lead_days": -1.0,
-          "first_matched_alert_timestamps": {
-            "observation_period_end": "2026-06-27T00:00:00+00:00",
-            "source_available_at": "2026-06-27T02:00:00+00:00",
-            "ingested_at": "2026-06-27T02:15:00+00:00",
-            "scored_at": "2026-06-27T02:15:00.015646+00:00",
-            "alert_issued_at": "2026-06-27T02:15:00.020646+00:00",
-            "task_acknowledged_at": "2026-06-27T04:00:00+00:00"
-          },
+          "observation_time_detection_delay_days": 0.0,
+          "observation_time_useful_lead_days": -1.0,
+          "observation_delay_status": "onset_day_detection",
+          "issue_time_detection_delay_days": 1.0104,
+          "issue_time_useful_lead_days": -2.0104,
+          "issue_delay_status": "post_onset_detection",
           "pipeline_latencies": {
-            "scoring_compute_latency_ms": 19.11,
-            "source_to_alert_pipeline_latency_minutes": 15.0,
-            "observation_turnaround_hours": 2.25,
+            "source_available_to_issue_seconds": 602.0,
+            "source_available_to_issue_minutes": 10.03,
+            "observation_period_end_to_issue_seconds": 903.0,
+            "observation_period_end_to_issue_minutes": 15.05,
+            "scoring_compute_latency_ms": 33.0,
             "data_transmission_cadence_hours": 24.0
+          },
+          "first_matched_alert_timestamps": {
+            "observation_date": "2026-06-27",
+            "observation_period_end": "2026-06-27T23:59:59+00:00",
+            "source_available_at": "2026-06-28T00:05:00+00:00",
+            "ingested_at": "2026-06-28T00:12:30+00:00",
+            "scored_at": "2026-06-28T00:15:00+00:00",
+            "alert_issued_at": "2026-06-28T00:15:02+00:00",
+            "task_acknowledged_at": "2026-06-28T02:30:00+00:00",
+            "provenance_labels": {
+              "observation_date": "synthetic_scenario_date",
+              "observation_period_end": "assumed_daily_cutoff_235959",
+              "source_available_at": "assumed_upstream_publication_latency",
+              "ingested_at": "assumed_batch_ingestion_schedule",
+              "scored_at": "assumed_compute_scheduling_window",
+              "alert_issued_at": "assumed_notification_dispatch",
+              "task_acknowledged_at": "assumed_operator_response",
+              "scoring_compute_ms": "measured_runtime_latency"
+            }
           }
         },
         "episodes": [
@@ -474,24 +602,38 @@
               28,
               29
             ],
-            "first_issued_at": "2026-06-27T00:00:00+00:00",
-            "last_issued_at": "2026-06-30T00:00:00+00:00",
+            "first_issued_at": "2026-06-28T00:15:02+00:00",
+            "last_issued_at": "2026-07-01T00:15:02+00:00",
+            "observation_first_date": "2026-06-27",
             "alert_count": 4,
             "peak_evidence_score": 50.0,
             "is_matched": true,
             "matched_reference_event_id": "REF-EVT-HEAT-ABRUPT-2026",
-            "matching_reason": "Matched reference event: first alert on Day 26 (2026-06-27) falls within eligible event window [2026-06-26 to 2026-06-30]."
+            "matching_reason": "Matched onset-day detection: first alert on Day 26 (2026-06-27) coincides with ground-truth event onset."
           }
         ]
       },
       "health_only": {
         "policy": "health_only",
         "scenario": "heat-abrupt-extreme",
+        "scenario_metadata": {
+          "generator_version": "0.2.0",
+          "seed": 101,
+          "commit": "ac86ff5",
+          "configuration": {
+            "burn_in_days": 14,
+            "temp_threshold_c": 39.0,
+            "smoothing_factor": 0.3,
+            "control_limit_sigma": 2.5,
+            "eligible_pre_onset_lead_days": 2
+          }
+        },
         "reference_ground_truth": {
           "total_reference_events": 1,
           "matched_reference_events": 1,
           "missed_reference_events": 0,
           "event_id": "REF-EVT-HEAT-ABRUPT-2026",
+          "hazard": "heat_illness",
           "onset_at": "2026-06-27T00:00:00+00:00",
           "end_at": "2026-06-30T00:00:00+00:00",
           "earliest_useful_action_at": "2026-06-26T00:00:00+00:00"
@@ -535,22 +677,38 @@
           "event_sensitivity": 1.0,
           "overall_alert_ppv": 0.25,
           "corroborated_health_warning_ppv": 0.0,
-          "detection_delay_days": 0.0,
-          "detection_delay_status": "onset_day_detection",
-          "useful_action_lead_days": -1.0,
-          "first_matched_alert_timestamps": {
-            "observation_period_end": "2026-06-27T00:00:00+00:00",
-            "source_available_at": "2026-06-27T02:00:00+00:00",
-            "ingested_at": "2026-06-27T02:15:00+00:00",
-            "scored_at": "2026-06-27T02:15:00.017365+00:00",
-            "alert_issued_at": "2026-06-27T02:15:00.022365+00:00",
-            "task_acknowledged_at": "2026-06-27T04:00:00+00:00"
-          },
+          "observation_time_detection_delay_days": 0.0,
+          "observation_time_useful_lead_days": -1.0,
+          "observation_delay_status": "onset_day_detection",
+          "issue_time_detection_delay_days": 1.0104,
+          "issue_time_useful_lead_days": -2.0104,
+          "issue_delay_status": "post_onset_detection",
           "pipeline_latencies": {
-            "scoring_compute_latency_ms": 17.15,
-            "source_to_alert_pipeline_latency_minutes": 15.0,
-            "observation_turnaround_hours": 2.25,
+            "source_available_to_issue_seconds": 602.0,
+            "source_available_to_issue_minutes": 10.03,
+            "observation_period_end_to_issue_seconds": 903.0,
+            "observation_period_end_to_issue_minutes": 15.05,
+            "scoring_compute_latency_ms": 38.92,
             "data_transmission_cadence_hours": 24.0
+          },
+          "first_matched_alert_timestamps": {
+            "observation_date": "2026-06-27",
+            "observation_period_end": "2026-06-27T23:59:59+00:00",
+            "source_available_at": "2026-06-28T00:05:00+00:00",
+            "ingested_at": "2026-06-28T00:12:30+00:00",
+            "scored_at": "2026-06-28T00:15:00+00:00",
+            "alert_issued_at": "2026-06-28T00:15:02+00:00",
+            "task_acknowledged_at": "2026-06-28T02:30:00+00:00",
+            "provenance_labels": {
+              "observation_date": "synthetic_scenario_date",
+              "observation_period_end": "assumed_daily_cutoff_235959",
+              "source_available_at": "assumed_upstream_publication_latency",
+              "ingested_at": "assumed_batch_ingestion_schedule",
+              "scored_at": "assumed_compute_scheduling_window",
+              "alert_issued_at": "assumed_notification_dispatch",
+              "task_acknowledged_at": "assumed_operator_response",
+              "scoring_compute_ms": "measured_runtime_latency"
+            }
           }
         },
         "episodes": [
@@ -563,13 +721,14 @@
               14,
               16
             ],
-            "first_issued_at": "2026-06-15T00:00:00+00:00",
-            "last_issued_at": "2026-06-17T00:00:00+00:00",
+            "first_issued_at": "2026-06-16T00:15:02+00:00",
+            "last_issued_at": "2026-06-18T00:15:02+00:00",
+            "observation_first_date": "2026-06-15",
             "alert_count": 2,
             "peak_evidence_score": 60.0,
             "is_matched": false,
             "matched_reference_event_id": null,
-            "matching_reason": "Unmatched false alarm: alert issued on Day 14 (2026-06-15) preceded event onset by 12 days (Poisson baseline fluctuation; not early warning)."
+            "matching_reason": "Unmatched alert (false alarm): alert on Day 14 (2026-06-15) preceded event onset by 12 days, exceeding the 2-day eligible lead window."
           },
           {
             "episode_id": "EP-HEAT-002",
@@ -579,13 +738,14 @@
             "days_active": [
               23
             ],
-            "first_issued_at": "2026-06-24T00:00:00+00:00",
-            "last_issued_at": "2026-06-24T00:00:00+00:00",
+            "first_issued_at": "2026-06-25T00:15:02+00:00",
+            "last_issued_at": "2026-06-25T00:15:02+00:00",
+            "observation_first_date": "2026-06-24",
             "alert_count": 1,
             "peak_evidence_score": 60.0,
             "is_matched": false,
             "matched_reference_event_id": null,
-            "matching_reason": "Unmatched false alarm: alert issued on Day 23 (2026-06-24) preceded event onset by 3 days (Poisson baseline fluctuation; not early warning)."
+            "matching_reason": "Unmatched alert (false alarm): alert on Day 23 (2026-06-24) preceded event onset by 3 days, exceeding the 2-day eligible lead window."
           },
           {
             "episode_id": "EP-HEAT-003",
@@ -598,13 +758,14 @@
               28,
               29
             ],
-            "first_issued_at": "2026-06-27T00:00:00+00:00",
-            "last_issued_at": "2026-06-30T00:00:00+00:00",
+            "first_issued_at": "2026-06-28T00:15:02+00:00",
+            "last_issued_at": "2026-07-01T00:15:02+00:00",
+            "observation_first_date": "2026-06-27",
             "alert_count": 4,
             "peak_evidence_score": 60.0,
             "is_matched": true,
             "matched_reference_event_id": "REF-EVT-HEAT-ABRUPT-2026",
-            "matching_reason": "Matched reference event: first alert on Day 26 (2026-06-27) falls within eligible event window [2026-06-26 to 2026-06-30]."
+            "matching_reason": "Matched onset-day detection: first alert on Day 26 (2026-06-27) coincides with ground-truth event onset."
           },
           {
             "episode_id": "EP-HEAT-004",
@@ -614,24 +775,38 @@
             "days_active": [
               37
             ],
-            "first_issued_at": "2026-07-08T00:00:00+00:00",
-            "last_issued_at": "2026-07-08T00:00:00+00:00",
+            "first_issued_at": "2026-07-09T00:15:02+00:00",
+            "last_issued_at": "2026-07-09T00:15:02+00:00",
+            "observation_first_date": "2026-07-08",
             "alert_count": 1,
             "peak_evidence_score": 60.0,
             "is_matched": false,
             "matched_reference_event_id": null,
-            "matching_reason": "Unmatched post-event alert: alert issued on Day 37 (2026-07-08) occurred after reference event termination."
+            "matching_reason": "Unmatched post-event alert: alert on Day 37 (2026-07-08) occurred after reference event termination."
           }
         ]
       },
       "fused_corroborated": {
         "policy": "fused_corroborated",
         "scenario": "heat-abrupt-extreme",
+        "scenario_metadata": {
+          "generator_version": "0.2.0",
+          "seed": 101,
+          "commit": "ac86ff5",
+          "configuration": {
+            "burn_in_days": 14,
+            "temp_threshold_c": 39.0,
+            "smoothing_factor": 0.3,
+            "control_limit_sigma": 2.5,
+            "eligible_pre_onset_lead_days": 2
+          }
+        },
         "reference_ground_truth": {
           "total_reference_events": 1,
           "matched_reference_events": 1,
           "missed_reference_events": 0,
           "event_id": "REF-EVT-HEAT-ABRUPT-2026",
+          "hazard": "heat_illness",
           "onset_at": "2026-06-27T00:00:00+00:00",
           "end_at": "2026-06-30T00:00:00+00:00",
           "earliest_useful_action_at": "2026-06-26T00:00:00+00:00"
@@ -675,22 +850,38 @@
           "event_sensitivity": 1.0,
           "overall_alert_ppv": 0.25,
           "corroborated_health_warning_ppv": 1.0,
-          "detection_delay_days": 0.0,
-          "detection_delay_status": "onset_day_detection",
-          "useful_action_lead_days": -1.0,
-          "first_matched_alert_timestamps": {
-            "observation_period_end": "2026-06-27T00:00:00+00:00",
-            "source_available_at": "2026-06-27T02:00:00+00:00",
-            "ingested_at": "2026-06-27T02:15:00+00:00",
-            "scored_at": "2026-06-27T02:15:00.017625+00:00",
-            "alert_issued_at": "2026-06-27T02:15:00.022625+00:00",
-            "task_acknowledged_at": "2026-06-27T04:00:00+00:00"
-          },
+          "observation_time_detection_delay_days": 0.0,
+          "observation_time_useful_lead_days": -1.0,
+          "observation_delay_status": "onset_day_detection",
+          "issue_time_detection_delay_days": 1.0104,
+          "issue_time_useful_lead_days": -2.0104,
+          "issue_delay_status": "post_onset_detection",
           "pipeline_latencies": {
-            "scoring_compute_latency_ms": 17.39,
-            "source_to_alert_pipeline_latency_minutes": 15.0,
-            "observation_turnaround_hours": 2.25,
+            "source_available_to_issue_seconds": 602.0,
+            "source_available_to_issue_minutes": 10.03,
+            "observation_period_end_to_issue_seconds": 903.0,
+            "observation_period_end_to_issue_minutes": 15.05,
+            "scoring_compute_latency_ms": 62.48,
             "data_transmission_cadence_hours": 24.0
+          },
+          "first_matched_alert_timestamps": {
+            "observation_date": "2026-06-27",
+            "observation_period_end": "2026-06-27T23:59:59+00:00",
+            "source_available_at": "2026-06-28T00:05:00+00:00",
+            "ingested_at": "2026-06-28T00:12:30+00:00",
+            "scored_at": "2026-06-28T00:15:00+00:00",
+            "alert_issued_at": "2026-06-28T00:15:02+00:00",
+            "task_acknowledged_at": "2026-06-28T02:30:00+00:00",
+            "provenance_labels": {
+              "observation_date": "synthetic_scenario_date",
+              "observation_period_end": "assumed_daily_cutoff_235959",
+              "source_available_at": "assumed_upstream_publication_latency",
+              "ingested_at": "assumed_batch_ingestion_schedule",
+              "scored_at": "assumed_compute_scheduling_window",
+              "alert_issued_at": "assumed_notification_dispatch",
+              "task_acknowledged_at": "assumed_operator_response",
+              "scoring_compute_ms": "measured_runtime_latency"
+            }
           }
         },
         "episodes": [
@@ -705,13 +896,14 @@
               28,
               29
             ],
-            "first_issued_at": "2026-06-27T00:00:00+00:00",
-            "last_issued_at": "2026-06-30T00:00:00+00:00",
+            "first_issued_at": "2026-06-28T00:15:02+00:00",
+            "last_issued_at": "2026-07-01T00:15:02+00:00",
+            "observation_first_date": "2026-06-27",
             "alert_count": 4,
             "peak_evidence_score": 90.0,
             "is_matched": true,
             "matched_reference_event_id": "REF-EVT-HEAT-ABRUPT-2026",
-            "matching_reason": "Matched reference event: first alert on Day 26 (2026-06-27) falls within eligible event window [2026-06-26 to 2026-06-30]."
+            "matching_reason": "Matched onset-day detection: first alert on Day 26 (2026-06-27) coincides with ground-truth event onset."
           },
           {
             "episode_id": "EP-HEAT-002",
@@ -722,13 +914,14 @@
               14,
               16
             ],
-            "first_issued_at": "2026-06-15T00:00:00+00:00",
-            "last_issued_at": "2026-06-17T00:00:00+00:00",
+            "first_issued_at": "2026-06-16T00:15:02+00:00",
+            "last_issued_at": "2026-06-18T00:15:02+00:00",
+            "observation_first_date": "2026-06-15",
             "alert_count": 2,
             "peak_evidence_score": 61.4,
             "is_matched": false,
             "matched_reference_event_id": null,
-            "matching_reason": "Unmatched false alarm: alert issued on Day 14 (2026-06-15) preceded event onset by 12 days (Poisson baseline fluctuation; not early warning)."
+            "matching_reason": "Unmatched alert (false alarm): alert on Day 14 (2026-06-15) preceded event onset by 12 days, exceeding the 2-day eligible lead window."
           },
           {
             "episode_id": "EP-HEAT-003",
@@ -738,13 +931,14 @@
             "days_active": [
               23
             ],
-            "first_issued_at": "2026-06-24T00:00:00+00:00",
-            "last_issued_at": "2026-06-24T00:00:00+00:00",
+            "first_issued_at": "2026-06-25T00:15:02+00:00",
+            "last_issued_at": "2026-06-25T00:15:02+00:00",
+            "observation_first_date": "2026-06-24",
             "alert_count": 1,
             "peak_evidence_score": 60.2,
             "is_matched": false,
             "matched_reference_event_id": null,
-            "matching_reason": "Unmatched false alarm: alert issued on Day 23 (2026-06-24) preceded event onset by 3 days (Poisson baseline fluctuation; not early warning)."
+            "matching_reason": "Unmatched alert (false alarm): alert on Day 23 (2026-06-24) preceded event onset by 3 days, exceeding the 2-day eligible lead window."
           },
           {
             "episode_id": "EP-HEAT-004",
@@ -754,13 +948,14 @@
             "days_active": [
               37
             ],
-            "first_issued_at": "2026-07-08T00:00:00+00:00",
-            "last_issued_at": "2026-07-08T00:00:00+00:00",
+            "first_issued_at": "2026-07-09T00:15:02+00:00",
+            "last_issued_at": "2026-07-09T00:15:02+00:00",
+            "observation_first_date": "2026-07-08",
             "alert_count": 1,
             "peak_evidence_score": 59.5,
             "is_matched": false,
             "matched_reference_event_id": null,
-            "matching_reason": "Unmatched post-event alert: alert issued on Day 37 (2026-07-08) occurred after reference event termination."
+            "matching_reason": "Unmatched post-event alert: alert on Day 37 (2026-07-08) occurred after reference event termination."
           }
         ]
       }
@@ -769,11 +964,24 @@
       "environmental_only": {
         "policy": "environmental_only",
         "scenario": "spurious-health-spike",
+        "scenario_metadata": {
+          "generator_version": "0.2.0",
+          "seed": 202,
+          "commit": "ac86ff5",
+          "configuration": {
+            "burn_in_days": 14,
+            "temp_threshold_c": 39.0,
+            "smoothing_factor": 0.3,
+            "control_limit_sigma": 2.5,
+            "eligible_pre_onset_lead_days": 2
+          }
+        },
         "reference_ground_truth": {
           "total_reference_events": 0,
           "matched_reference_events": 0,
           "missed_reference_events": 0,
           "event_id": null,
+          "hazard": null,
           "onset_at": null,
           "end_at": null,
           "earliest_useful_action_at": null
@@ -817,27 +1025,45 @@
           "event_sensitivity": null,
           "overall_alert_ppv": 0.0,
           "corroborated_health_warning_ppv": 0.0,
-          "detection_delay_days": null,
-          "detection_delay_status": "event_missed_or_null",
-          "useful_action_lead_days": null,
-          "first_matched_alert_timestamps": null,
+          "observation_time_detection_delay_days": null,
+          "observation_time_useful_lead_days": null,
+          "observation_delay_status": "event_missed_or_null",
+          "issue_time_detection_delay_days": null,
+          "issue_time_useful_lead_days": null,
+          "issue_delay_status": "event_missed_or_null",
           "pipeline_latencies": {
-            "scoring_compute_latency_ms": 17.2,
-            "source_to_alert_pipeline_latency_minutes": 15.0,
-            "observation_turnaround_hours": 2.25,
+            "source_available_to_issue_seconds": null,
+            "source_available_to_issue_minutes": null,
+            "observation_period_end_to_issue_seconds": null,
+            "observation_period_end_to_issue_minutes": null,
+            "scoring_compute_latency_ms": 93.75,
             "data_transmission_cadence_hours": 24.0
-          }
+          },
+          "first_matched_alert_timestamps": null
         },
         "episodes": []
       },
       "health_only": {
         "policy": "health_only",
         "scenario": "spurious-health-spike",
+        "scenario_metadata": {
+          "generator_version": "0.2.0",
+          "seed": 202,
+          "commit": "ac86ff5",
+          "configuration": {
+            "burn_in_days": 14,
+            "temp_threshold_c": 39.0,
+            "smoothing_factor": 0.3,
+            "control_limit_sigma": 2.5,
+            "eligible_pre_onset_lead_days": 2
+          }
+        },
         "reference_ground_truth": {
           "total_reference_events": 0,
           "matched_reference_events": 0,
           "missed_reference_events": 0,
           "event_id": null,
+          "hazard": null,
           "onset_at": null,
           "end_at": null,
           "earliest_useful_action_at": null
@@ -881,16 +1107,21 @@
           "event_sensitivity": null,
           "overall_alert_ppv": 0.0,
           "corroborated_health_warning_ppv": 0.0,
-          "detection_delay_days": null,
-          "detection_delay_status": "event_missed_or_null",
-          "useful_action_lead_days": null,
-          "first_matched_alert_timestamps": null,
+          "observation_time_detection_delay_days": null,
+          "observation_time_useful_lead_days": null,
+          "observation_delay_status": "event_missed_or_null",
+          "issue_time_detection_delay_days": null,
+          "issue_time_useful_lead_days": null,
+          "issue_delay_status": "event_missed_or_null",
           "pipeline_latencies": {
-            "scoring_compute_latency_ms": 18.67,
-            "source_to_alert_pipeline_latency_minutes": 15.0,
-            "observation_turnaround_hours": 2.25,
+            "source_available_to_issue_seconds": null,
+            "source_available_to_issue_minutes": null,
+            "observation_period_end_to_issue_seconds": null,
+            "observation_period_end_to_issue_minutes": null,
+            "scoring_compute_latency_ms": 28.85,
             "data_transmission_cadence_hours": 24.0
-          }
+          },
+          "first_matched_alert_timestamps": null
         },
         "episodes": [
           {
@@ -903,24 +1134,38 @@
               22,
               23
             ],
-            "first_issued_at": "2026-06-22T00:00:00+00:00",
-            "last_issued_at": "2026-06-24T00:00:00+00:00",
+            "first_issued_at": "2026-06-23T00:15:02+00:00",
+            "last_issued_at": "2026-06-25T00:15:02+00:00",
+            "observation_first_date": "2026-06-22",
             "alert_count": 3,
             "peak_evidence_score": 60.0,
             "is_matched": false,
             "matched_reference_event_id": null,
-            "matching_reason": "Null scenario (no ground-truth event): alert is an uncorroborated false alarm."
+            "matching_reason": "No reference event; one unmatched alert."
           }
         ]
       },
       "fused_corroborated": {
         "policy": "fused_corroborated",
         "scenario": "spurious-health-spike",
+        "scenario_metadata": {
+          "generator_version": "0.2.0",
+          "seed": 202,
+          "commit": "ac86ff5",
+          "configuration": {
+            "burn_in_days": 14,
+            "temp_threshold_c": 39.0,
+            "smoothing_factor": 0.3,
+            "control_limit_sigma": 2.5,
+            "eligible_pre_onset_lead_days": 2
+          }
+        },
         "reference_ground_truth": {
           "total_reference_events": 0,
           "matched_reference_events": 0,
           "missed_reference_events": 0,
           "event_id": null,
+          "hazard": null,
           "onset_at": null,
           "end_at": null,
           "earliest_useful_action_at": null
@@ -964,16 +1209,21 @@
           "event_sensitivity": null,
           "overall_alert_ppv": 0.0,
           "corroborated_health_warning_ppv": 0.0,
-          "detection_delay_days": null,
-          "detection_delay_status": "event_missed_or_null",
-          "useful_action_lead_days": null,
-          "first_matched_alert_timestamps": null,
+          "observation_time_detection_delay_days": null,
+          "observation_time_useful_lead_days": null,
+          "observation_delay_status": "event_missed_or_null",
+          "issue_time_detection_delay_days": null,
+          "issue_time_useful_lead_days": null,
+          "issue_delay_status": "event_missed_or_null",
           "pipeline_latencies": {
-            "scoring_compute_latency_ms": 20.94,
-            "source_to_alert_pipeline_latency_minutes": 15.0,
-            "observation_turnaround_hours": 2.25,
+            "source_available_to_issue_seconds": null,
+            "source_available_to_issue_minutes": null,
+            "observation_period_end_to_issue_seconds": null,
+            "observation_period_end_to_issue_minutes": null,
+            "scoring_compute_latency_ms": 26.03,
             "data_transmission_cadence_hours": 24.0
-          }
+          },
+          "first_matched_alert_timestamps": null
         },
         "episodes": [
           {
@@ -986,13 +1236,14 @@
               22,
               23
             ],
-            "first_issued_at": "2026-06-22T00:00:00+00:00",
-            "last_issued_at": "2026-06-24T00:00:00+00:00",
+            "first_issued_at": "2026-06-23T00:15:02+00:00",
+            "last_issued_at": "2026-06-25T00:15:02+00:00",
+            "observation_first_date": "2026-06-22",
             "alert_count": 3,
             "peak_evidence_score": 70.0,
             "is_matched": false,
             "matched_reference_event_id": null,
-            "matching_reason": "Null scenario (no ground-truth event): alert is an uncorroborated false alarm."
+            "matching_reason": "No reference event; one unmatched alert."
           }
         ]
       }
@@ -1003,91 +1254,103 @@
       "total_alert_episodes_across_scenarios": 2,
       "matched_episodes": 2,
       "unmatched_episodes": 0,
-      "false_alarms_in_null_scenario": 0,
+      "unmatched_alerts_in_null_scenario": 0,
       "scenario_timeliness": {
         "heat-gradual": {
-          "detection_delay_days": 1.0,
-          "detection_status": "post_onset_detection",
-          "useful_action_lead_days": -2.0,
+          "observation_time_delay_days": 1.0,
+          "issue_time_delay_days": 2.0104,
+          "observation_status": "post_onset_detection",
+          "issue_status": "post_onset_detection",
           "matched_episodes": 1,
           "unmatched_episodes": 0
         },
         "heat-abrupt-extreme": {
-          "detection_delay_days": 0.0,
-          "detection_status": "onset_day_detection",
-          "useful_action_lead_days": -1.0,
+          "observation_time_delay_days": 0.0,
+          "issue_time_delay_days": 1.0104,
+          "observation_status": "onset_day_detection",
+          "issue_status": "post_onset_detection",
           "matched_episodes": 1,
           "unmatched_episodes": 0
         },
         "spurious-health-spike": {
-          "detection_delay_days": null,
-          "detection_status": "event_missed_or_null",
-          "useful_action_lead_days": null,
+          "observation_time_delay_days": null,
+          "issue_time_delay_days": null,
+          "observation_status": "event_missed_or_null",
+          "issue_status": "event_missed_or_null",
           "matched_episodes": 0,
           "unmatched_episodes": 0
         }
       },
-      "cdc_operational_tradeoff": "High sensitivity for physical hazard threshold exceedances; triggers on Day 32 in gradual heat (+1 day delay) and Day 26 in abrupt shock (0-day delay); 0 false alarms in null scenario, but completely blind to clinical impact."
+      "policy_classification": "environmental_exposure_watch",
+      "operational_tradeoff_summary": "Environmental exposure watch: triggers on physical threshold exceedance (Day 32 in gradual heat, Day 26 in abrupt shock); 0 unmatched alerts in null scenario, but lacks clinical or workforce corroboration."
     },
     "health_only": {
       "total_alert_episodes_across_scenarios": 8,
       "matched_episodes": 2,
       "unmatched_episodes": 6,
-      "false_alarms_in_null_scenario": 1,
+      "unmatched_alerts_in_null_scenario": 1,
       "scenario_timeliness": {
         "heat-gradual": {
-          "detection_delay_days": 0.0,
-          "detection_status": "onset_day_detection",
-          "useful_action_lead_days": -1.0,
+          "observation_time_delay_days": 0.0,
+          "issue_time_delay_days": 1.0104,
+          "observation_status": "onset_day_detection",
+          "issue_status": "post_onset_detection",
           "matched_episodes": 1,
           "unmatched_episodes": 2
         },
         "heat-abrupt-extreme": {
-          "detection_delay_days": 0.0,
-          "detection_status": "onset_day_detection",
-          "useful_action_lead_days": -1.0,
+          "observation_time_delay_days": 0.0,
+          "issue_time_delay_days": 1.0104,
+          "observation_status": "onset_day_detection",
+          "issue_status": "post_onset_detection",
           "matched_episodes": 1,
           "unmatched_episodes": 3
         },
         "spurious-health-spike": {
-          "detection_delay_days": null,
-          "detection_status": "event_missed_or_null",
-          "useful_action_lead_days": null,
+          "observation_time_delay_days": null,
+          "issue_time_delay_days": null,
+          "observation_status": "event_missed_or_null",
+          "issue_status": "event_missed_or_null",
           "matched_episodes": 0,
           "unmatched_episodes": 1
         }
       },
-      "cdc_operational_tradeoff": "Alerts on onset day (Day 31 in gradual heat, 0-day delay; Day 26 in abrupt shock, 0-day delay). However, generates 6 pre-event false alarms and 1 false alarm episode in null scenario; vulnerable to non-environmental noise."
+      "policy_classification": "uncorroborated_health_anomaly",
+      "operational_tradeoff_summary": "Uncorroborated health anomaly: detects clinical surge on onset day (Day 31 in gradual heat, Day 26 in abrupt shock); vulnerable to non-environmental noise, generating pre-onset baseline false alarms and 1 unmatched alert in null scenario."
     },
     "fused_corroborated": {
       "total_alert_episodes_across_scenarios": 10,
       "matched_episodes": 4,
       "unmatched_episodes": 6,
-      "false_alarms_in_null_scenario": 1,
+      "unmatched_alerts_in_null_scenario": 1,
       "scenario_timeliness": {
         "heat-gradual": {
-          "detection_delay_days": 1.0,
-          "detection_status": "post_onset_detection",
-          "useful_action_lead_days": -2.0,
+          "observation_time_delay_days": 1.0,
+          "issue_time_delay_days": 2.0104,
+          "observation_status": "post_onset_detection",
+          "issue_status": "post_onset_detection",
           "matched_episodes": 3,
           "unmatched_episodes": 2
         },
         "heat-abrupt-extreme": {
-          "detection_delay_days": 0.0,
-          "detection_status": "onset_day_detection",
-          "useful_action_lead_days": -1.0,
+          "observation_time_delay_days": 0.0,
+          "issue_time_delay_days": 1.0104,
+          "observation_status": "onset_day_detection",
+          "issue_status": "post_onset_detection",
           "matched_episodes": 1,
           "unmatched_episodes": 3
         },
         "spurious-health-spike": {
-          "detection_delay_days": null,
-          "detection_status": "event_missed_or_null",
-          "useful_action_lead_days": null,
+          "observation_time_delay_days": null,
+          "issue_time_delay_days": null,
+          "observation_status": "event_missed_or_null",
+          "issue_status": "event_missed_or_null",
           "matched_episodes": 0,
           "unmatched_episodes": 1
         }
       },
-      "cdc_operational_tradeoff": "Filters spurious clinical spikes; in gradual heat produces corroborated warning on Day 32 (+1 day delay, post-onset detection); in abrupt shock alerts immediately on Day 26 (0-day delay); 0 false warnings in null scenario."
+      "policy_classification": "fused_corroborated_warning",
+      "operational_tradeoff_summary": "Fused corroborated warning: corroborates physical exposure with health/workforce impact; triggers corroborated warning on Day 32 in gradual heat (+1 day observation delay, ~2 day issue delay; post-onset detection) and Day 26 in abrupt shock (0-day delay); 0 unmatched warnings in null scenario."
     }
   }
 }

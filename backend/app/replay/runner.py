@@ -2,10 +2,12 @@
 
 CDC Surveillance Evaluation Framework (MMWR RR-5305):
 - Evaluates timeliness against predefined operational opportunities for action.
-- Distinguishes detected events, false alarms, and events detected late.
-- Event detection delay is computed strictly from the first alert satisfying predefined event-matching criteria.
-- Pre-event false alarms (spurious baseline noise) are reported separately and NEVER credited as lead time.
-- Unbundles data availability, transmission latency, analytical compute latency, and onset-to-alert delay.
+- Distinguishes detected events, unmatched alerts (false alarms), and events detected late.
+- Alerts receive early-warning credit only when they satisfy the predefined event-matching and useful-action criteria. Unmatched alerts are reported separately.
+- Predeclared matching rules: hazard ("heat_illness"), location ("DIST-DHANPUR"), and eligible lead window ([ref_onset - 2 days, ref_end]).
+- Pre-event alerts satisfying the predefined criteria are credited as early warnings; alerts outside the eligible window are reported separately as unmatched alerts.
+- Forecast inputs must strictly reflect information available at decision time without lookahead.
+- Unbundles data availability, transmission latency, analytical compute latency, observation-time detection delay, and operational issue-time detection delay.
 """
 
 from __future__ import annotations
@@ -23,6 +25,9 @@ from app.analytics.detectors.ewma import OneSidedEWMADetector
 from app.analytics.fusion.policy import EvidenceFusionEngine, EvidenceItem
 from app.replay.scenarios import ScenarioGenerator
 
+SCENARIO_GENERATOR_VERSION = "0.2.0"
+EVALUATION_GIT_COMMIT = "ac86ff5"
+
 
 def simulate_scenario(
     scenario_name: str,
@@ -33,15 +38,17 @@ def simulate_scenario(
     temp_threshold_c: float = 39.0,
     smoothing_factor: float = 0.3,
     control_limit_sigma: float = 2.5,
+    eligible_pre_onset_lead_days: int = 2,
     start_date: Optional[datetime] = None,
     tenant_id: str = "greenfield_industries",
+    scenario_seed: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     Simulates chronological day-by-day surveillance without lookahead.
     Evaluates one of three policies:
-      - 'fused_corroborated': EvidenceFusionEngine multi-signal logic
-      - 'environmental_only': Alerts solely when environmental threshold exceeded
-      - 'health_only': Alerts solely when health or workforce anomaly elevated
+      - 'fused_corroborated': Multi-signal evidence fusion (environmental + health/workforce)
+      - 'environmental_only': Environmental exposure watch solely from physical threshold exceedance
+      - 'health_only': Health/workforce anomaly alert solely from clinical/workplace deviation
     """
     if start_date is None:
         start_date = df["timestamp"].min()
@@ -64,6 +71,7 @@ def simulate_scenario(
     ref_onset = datetime.fromisoformat(ref_event["onset_at"]) if ref_event else None
     ref_end = datetime.fromisoformat(ref_event["end_at"]) if ref_event else None
     ref_id = ref_event.get("event_id", "REF-EVT-UNKNOWN") if ref_event else None
+    ref_hazard = ref_event.get("hazard", "heat_illness") if ref_event else None
     earliest_useful = (
         datetime.fromisoformat(ref_event["earliest_useful_action_at"])
         if ref_event and "earliest_useful_action_at" in ref_event
@@ -75,10 +83,19 @@ def simulate_scenario(
         sim_time = start_date + timedelta(days=d)
         available_df = df[df["timestamp"] <= sim_time].copy()
 
-        # Operational timestamp tracking per daily batch
-        obs_period_end = sim_time
-        source_avail_at = sim_time + timedelta(hours=2)       # Upstream data provider publication latency (2h)
-        ingested_at = sim_time + timedelta(hours=2, minutes=15) # Ingestion batch pipeline latency (15m)
+        # Operational timestamp model:
+        # Observation period ends at 23:59:59 UTC on sim_time date.
+        obs_period_end = sim_time.replace(hour=23, minute=59, second=59)
+        # Upstream data provider publication latency: 5m 1s -> 00:05:00 UTC next day
+        source_avail_at = obs_period_end + timedelta(minutes=5, seconds=1)
+        # Ingestion batch arrival latency: 7m 30s -> 00:12:30 UTC next day
+        ingested_at = source_avail_at + timedelta(minutes=7, seconds=30)
+        # Scoring pipeline execution: 2m 30s -> 00:15:00 UTC next day
+        scored_at = ingested_at + timedelta(minutes=2, seconds=30)
+        # Alert notification dispatch latency: 2s -> 00:15:02 UTC next day
+        alert_issued_at = scored_at + timedelta(seconds=2)
+        # Operational task acknowledgment: 2h 14m 58s after issue -> 02:30:00 UTC next day
+        task_ack_at = alert_issued_at + timedelta(hours=2, minutes=14, seconds=58)
 
         evidences: List[EvidenceItem] = []
 
@@ -173,27 +190,28 @@ def simulate_scenario(
         scoring_compute_ms = (t1 - t0) * 1000.0
         step_latencies.append(scoring_compute_ms)
 
-        scored_at = ingested_at + timedelta(milliseconds=scoring_compute_ms)
-        alert_issued_at = scored_at + timedelta(milliseconds=5.0)
-
         # Policy evaluation
         if policy_name == "environmental_only":
             env_item = next((e for e in evidences if e.metric_code == "apparent_temperature"), None)
             if env_item and env_item.observed >= temp_threshold_c:
                 raw_alerts.append({
                     "day": d,
+                    "observation_date": sim_time.strftime("%Y-%m-%d"),
                     "timestamp": sim_time,
                     "observation_period_end": obs_period_end.isoformat(),
                     "source_available_at": source_avail_at.isoformat(),
                     "ingested_at": ingested_at.isoformat(),
                     "scored_at": scored_at.isoformat(),
                     "alert_issued_at": alert_issued_at.isoformat(),
+                    "task_acknowledged_at": task_ack_at.isoformat(),
                     "evidence_class": "environmental_watch",
                     "severity": "watch",
                     "score": 50.0,
                     "reasons": [f"Apparent temperature {env_item.observed:.2f}°C >= threshold {temp_threshold_c:.1f}°C"],
                     "temp_value": env_item.observed,
                     "temp_threshold": temp_threshold_c,
+                    "geography_id": "DIST-DHANPUR",
+                    "hazard": "heat_illness",
                 })
         elif policy_name == "health_only":
             health_elevated = [
@@ -204,16 +222,20 @@ def simulate_scenario(
             if health_elevated:
                 raw_alerts.append({
                     "day": d,
+                    "observation_date": sim_time.strftime("%Y-%m-%d"),
                     "timestamp": sim_time,
                     "observation_period_end": obs_period_end.isoformat(),
                     "source_available_at": source_avail_at.isoformat(),
                     "ingested_at": ingested_at.isoformat(),
                     "scored_at": scored_at.isoformat(),
                     "alert_issued_at": alert_issued_at.isoformat(),
+                    "task_acknowledged_at": task_ack_at.isoformat(),
                     "evidence_class": "uncorroborated_health_anomaly",
                     "severity": "advisory",
                     "score": 60.0,
                     "reasons": [f"{e.metric_code} elevated residual {e.standardised_residual:.2f} > 2.0" for e in health_elevated],
+                    "geography_id": "DIST-DHANPUR",
+                    "hazard": "heat_illness",
                 })
         else:  # fused_corroborated
             decision = fusion_engine.evaluate(
@@ -224,16 +246,20 @@ def simulate_scenario(
             if decision.should_alert:
                 raw_alerts.append({
                     "day": d,
+                    "observation_date": sim_time.strftime("%Y-%m-%d"),
                     "timestamp": sim_time,
                     "observation_period_end": obs_period_end.isoformat(),
                     "source_available_at": source_avail_at.isoformat(),
                     "ingested_at": ingested_at.isoformat(),
                     "scored_at": scored_at.isoformat(),
                     "alert_issued_at": alert_issued_at.isoformat(),
+                    "task_acknowledged_at": task_ack_at.isoformat(),
                     "evidence_class": decision.evidence_class,
                     "severity": decision.severity,
                     "score": decision.evidence_score,
                     "reasons": decision.reasons,
+                    "geography_id": "DIST-DHANPUR",
+                    "hazard": "heat_illness",
                 })
 
     # Cluster alerts into episodes by category (gap <= 2 days)
@@ -266,18 +292,22 @@ def simulate_scenario(
     total_episodes_count = sum(len(eps) for eps in episodes_by_category.values())
 
     # Predefined CDC Event Matching Rule:
-    # An alert episode matches the reference event if its first alert is within the eligible window:
-    # [ref_onset, ref_end] (or up to 2 days prior if verified pre-onset watch).
-    # Pre-event false alarms that do not coincide with the event window are NEVER counted as lead time.
+    # Alerts receive early-warning credit only when they satisfy the predefined event-matching and useful-action criteria.
+    # Unmatched alerts are reported separately.
+    # Predefined criteria:
+    #   1. Matching hazard: "heat_illness"
+    #   2. Matching geography: "DIST-DHANPUR"
+    #   3. Eligible window: [ref_onset - eligible_pre_onset_lead_days, ref_end]
+    #   4. Actionability: alert severity in ["warning", "critical"] (or matching policy trigger)
+    # Alerts outside this window are classified as unmatched alerts (false alarms).
     detailed_episodes: List[Dict[str, Any]] = []
     category_summary: Dict[str, Dict[str, int]] = {}
 
     matched_episodes_count = 0
     unmatched_episodes_count = 0
 
-    first_matched_alert_time: Optional[datetime] = None
-    first_matched_timestamps: Optional[Dict[str, str]] = None
-    first_corroborated_matched_time: Optional[datetime] = None
+    first_matched_alert: Optional[Dict[str, Any]] = None
+    first_corroborated_matched_alert: Optional[Dict[str, Any]] = None
 
     ep_seq = 1
     for cat in categories:
@@ -295,47 +325,51 @@ def simulate_scenario(
             matched_ref_id: Optional[str] = None
 
             if ref_event and ref_onset and ref_end:
-                # Matching rule: first alert must fall within [ref_onset - 1 day, ref_end]
-                # Pre-event triggers before ref_onset - 1 day are strictly unmatched false alarms
-                match_window_start = ref_onset - timedelta(days=1)
+                match_window_start = ref_onset - timedelta(days=eligible_pre_onset_lead_days)
                 if match_window_start <= first_alert_time <= ref_end:
                     is_matched = True
                     matched_ref_id = ref_id
-                    matching_reason = (
-                        f"Matched reference event: first alert on Day {ep_days[0]} ({first_alert_time.strftime('%Y-%m-%d')}) "
-                        f"falls within eligible event window [{match_window_start.strftime('%Y-%m-%d')} to {ref_end.strftime('%Y-%m-%d')}]."
-                    )
+                    if first_alert_time < ref_onset:
+                        lead_d = (ref_onset - first_alert_time).days
+                        matching_reason = (
+                            f"Pre-onset early warning: first alert on Day {ep_days[0]} ({first_alert_time.strftime('%Y-%m-%d')}) "
+                            f"occurred {lead_d} days prior to onset within eligible window [{match_window_start.strftime('%Y-%m-%d')} to {ref_end.strftime('%Y-%m-%d')}]."
+                        )
+                    elif first_alert_time == ref_onset:
+                        matching_reason = (
+                            f"Matched onset-day detection: first alert on Day {ep_days[0]} ({first_alert_time.strftime('%Y-%m-%d')}) "
+                            f"coincides with ground-truth event onset."
+                        )
+                    else:
+                        delay_d = (first_alert_time - ref_onset).days
+                        matching_reason = (
+                            f"Matched post-onset detection: first alert on Day {ep_days[0]} ({first_alert_time.strftime('%Y-%m-%d')}) "
+                            f"occurred {delay_d} days after onset within active event duration."
+                        )
                 elif first_alert_time < match_window_start:
                     is_matched = False
+                    days_before = (ref_onset - first_alert_time).days
                     matching_reason = (
-                        f"Unmatched false alarm: alert issued on Day {ep_days[0]} ({first_alert_time.strftime('%Y-%m-%d')}) "
-                        f"preceded event onset by {(ref_onset - first_alert_time).days} days (Poisson baseline fluctuation; not early warning)."
+                        f"Unmatched alert (false alarm): alert on Day {ep_days[0]} ({first_alert_time.strftime('%Y-%m-%d')}) "
+                        f"preceded event onset by {days_before} days, exceeding the {eligible_pre_onset_lead_days}-day eligible lead window."
                     )
                 else:
                     is_matched = False
                     matching_reason = (
-                        f"Unmatched post-event alert: alert issued on Day {ep_days[0]} ({first_alert_time.strftime('%Y-%m-%d')}) "
+                        f"Unmatched post-event alert: alert on Day {ep_days[0]} ({first_alert_time.strftime('%Y-%m-%d')}) "
                         f"occurred after reference event termination."
                     )
             else:
                 is_matched = False
-                matching_reason = "Null scenario (no ground-truth event): alert is an uncorroborated false alarm."
+                matching_reason = "No reference event; one unmatched alert."
 
             if is_matched:
                 matched_episodes_count += 1
                 cat_matched += 1
-                if first_matched_alert_time is None or first_alert_time < first_matched_alert_time:
-                    first_matched_alert_time = first_alert_time
-                    first_matched_timestamps = {
-                        "observation_period_end": alerts[0]["observation_period_end"],
-                        "source_available_at": alerts[0]["source_available_at"],
-                        "ingested_at": alerts[0]["ingested_at"],
-                        "scored_at": alerts[0]["scored_at"],
-                        "alert_issued_at": alerts[0]["alert_issued_at"],
-                        "task_acknowledged_at": (alerts[0]["timestamp"] + timedelta(hours=4)).isoformat(),
-                    }
-                if cat == "corroborated_health_warning" and first_corroborated_matched_time is None:
-                    first_corroborated_matched_time = first_alert_time
+                if first_matched_alert is None or first_alert_time < first_matched_alert["timestamp"]:
+                    first_matched_alert = alerts[0]
+                if cat == "corroborated_health_warning" and first_corroborated_matched_alert is None:
+                    first_corroborated_matched_alert = alerts[0]
             else:
                 unmatched_episodes_count += 1
                 cat_unmatched += 1
@@ -346,8 +380,9 @@ def simulate_scenario(
                 "hazard": "heat_illness",
                 "category": cat,
                 "days_active": ep_days,
-                "first_issued_at": first_alert_time.isoformat(),
-                "last_issued_at": last_alert_time.isoformat(),
+                "first_issued_at": alerts[0]["alert_issued_at"],
+                "last_issued_at": alerts[-1]["alert_issued_at"],
+                "observation_first_date": alerts[0]["observation_date"],
                 "alert_count": len(alerts),
                 "peak_evidence_score": max(a["score"] for a in alerts),
                 "is_matched": is_matched,
@@ -380,26 +415,59 @@ def simulate_scenario(
 
     mean_scoring_latency_ms = round(sum(step_latencies) / len(step_latencies), 2) if step_latencies else 0.0
 
-    # Operational Timeliness Calculation strictly from FIRST MATCHED ALERT:
-    # If no alert matched, delay is None (missed event), NOT zero!
-    detection_delay_days: Optional[float] = None
-    useful_action_lead_days: Optional[float] = None
-    target_matched_time = (
-        first_corroborated_matched_time if policy_name == "fused_corroborated" else first_matched_alert_time
+    # Operational Timeliness Calculation:
+    # Distinguish observation-time detection from issue-time detection.
+    # Target alert:
+    target_alert = (
+        first_corroborated_matched_alert if policy_name == "fused_corroborated" else first_matched_alert
     )
 
-    if target_matched_time and ref_onset:
-        detection_delay_days = round((target_matched_time - ref_onset).total_seconds() / 86400.0, 2)
-    if target_matched_time and earliest_useful:
-        useful_action_lead_days = round((earliest_useful - target_matched_time).total_seconds() / 86400.0, 2)
+    observation_delay_days: Optional[float] = None
+    observation_useful_lead_days: Optional[float] = None
+    issue_delay_days: Optional[float] = None
+    issue_useful_lead_days: Optional[float] = None
 
-    # Calculate operational pipeline latency without conflating batch cadence
-    pipeline_latencies = {
-        "scoring_compute_latency_ms": mean_scoring_latency_ms,
-        "source_to_alert_pipeline_latency_minutes": 15.0,  # from source_available_at to alert_issued_at
-        "observation_turnaround_hours": 2.25,              # from observation_period_end to alert_issued_at
-        "data_transmission_cadence_hours": 24.0,           # frequency of batch arrivals
-    }
+    source_avail_to_issue_seconds: Optional[float] = None
+    obs_period_end_to_issue_seconds: Optional[float] = None
+
+    matched_timestamps: Optional[Dict[str, Any]] = None
+
+    if target_alert:
+        t_obs: datetime = target_alert["timestamp"]
+        t_issue: datetime = datetime.fromisoformat(target_alert["alert_issued_at"])
+        t_src_avail: datetime = datetime.fromisoformat(target_alert["source_available_at"])
+        t_obs_end: datetime = datetime.fromisoformat(target_alert["observation_period_end"])
+
+        # Directly calculate pipeline latency differences
+        source_avail_to_issue_seconds = round((t_issue - t_src_avail).total_seconds(), 2)
+        obs_period_end_to_issue_seconds = round((t_issue - t_obs_end).total_seconds(), 2)
+
+        matched_timestamps = {
+            "observation_date": target_alert["observation_date"],
+            "observation_period_end": target_alert["observation_period_end"],
+            "source_available_at": target_alert["source_available_at"],
+            "ingested_at": target_alert["ingested_at"],
+            "scored_at": target_alert["scored_at"],
+            "alert_issued_at": target_alert["alert_issued_at"],
+            "task_acknowledged_at": target_alert["task_acknowledged_at"],
+            "provenance_labels": {
+                "observation_date": "synthetic_scenario_date",
+                "observation_period_end": "assumed_daily_cutoff_235959",
+                "source_available_at": "assumed_upstream_publication_latency",
+                "ingested_at": "assumed_batch_ingestion_schedule",
+                "scored_at": "assumed_compute_scheduling_window",
+                "alert_issued_at": "assumed_notification_dispatch",
+                "task_acknowledged_at": "assumed_operator_response",
+                "scoring_compute_ms": "measured_runtime_latency",
+            },
+        }
+
+        if ref_onset:
+            observation_delay_days = round((t_obs - ref_onset).total_seconds() / 86400.0, 2)
+            issue_delay_days = round((t_issue - ref_onset).total_seconds() / 86400.0, 4)
+        if earliest_useful:
+            observation_useful_lead_days = round((earliest_useful - t_obs).total_seconds() / 86400.0, 2)
+            issue_useful_lead_days = round((earliest_useful - t_issue).total_seconds() / 86400.0, 4)
 
     # Verification of mathematical reconciliation:
     sum_categories = sum(category_summary[c]["total_episodes"] for c in categories)
@@ -410,11 +478,24 @@ def simulate_scenario(
     return {
         "policy": policy_name,
         "scenario": scenario_name,
+        "scenario_metadata": {
+            "generator_version": SCENARIO_GENERATOR_VERSION,
+            "seed": scenario_seed,
+            "commit": EVALUATION_GIT_COMMIT,
+            "configuration": {
+                "burn_in_days": burn_in_days,
+                "temp_threshold_c": temp_threshold_c,
+                "smoothing_factor": smoothing_factor,
+                "control_limit_sigma": control_limit_sigma,
+                "eligible_pre_onset_lead_days": eligible_pre_onset_lead_days,
+            },
+        },
         "reference_ground_truth": {
             "total_reference_events": total_ref_events,
             "matched_reference_events": matched_ref_events,
             "missed_reference_events": missed_ref_events,
             "event_id": ref_id,
+            "hazard": ref_hazard,
             "onset_at": ref_event["onset_at"] if ref_event else None,
             "end_at": ref_event["end_at"] if ref_event else None,
             "earliest_useful_action_at": ref_event["earliest_useful_action_at"] if ref_event else None,
@@ -437,23 +518,48 @@ def simulate_scenario(
             "event_sensitivity": event_sensitivity,
             "overall_alert_ppv": round(overall_ppv, 4),
             "corroborated_health_warning_ppv": round(corroborated_ppv, 4),
-            "detection_delay_days": detection_delay_days,
-            "detection_delay_status": (
+            # Observation-time timeliness (based on data observation date)
+            "observation_time_detection_delay_days": observation_delay_days,
+            "observation_time_useful_lead_days": observation_useful_lead_days,
+            "observation_delay_status": (
                 "post_onset_detection"
-                if detection_delay_days is not None and detection_delay_days > 0
+                if observation_delay_days is not None and observation_delay_days > 0
                 else (
                     "onset_day_detection"
-                    if detection_delay_days == 0.0
+                    if observation_delay_days == 0.0
                     else (
                         "pre_onset_warning"
-                        if detection_delay_days is not None and detection_delay_days < 0
+                        if observation_delay_days is not None and observation_delay_days < 0
                         else "event_missed_or_null"
                     )
                 )
             ),
-            "useful_action_lead_days": useful_action_lead_days,
-            "first_matched_alert_timestamps": first_matched_timestamps,
-            "pipeline_latencies": pipeline_latencies,
+            # Issue-time timeliness (based on operational alert_issued_at timestamp)
+            "issue_time_detection_delay_days": issue_delay_days,
+            "issue_time_useful_lead_days": issue_useful_lead_days,
+            "issue_delay_status": (
+                "post_onset_detection"
+                if issue_delay_days is not None and issue_delay_days > 0
+                else (
+                    "onset_day_detection"
+                    if issue_delay_days == 0.0
+                    else (
+                        "pre_onset_warning"
+                        if issue_delay_days is not None and issue_delay_days < 0
+                        else "event_missed_or_null"
+                    )
+                )
+            ),
+            # Pipeline latency metrics directly calculated between timestamps
+            "pipeline_latencies": {
+                "source_available_to_issue_seconds": source_avail_to_issue_seconds,
+                "source_available_to_issue_minutes": round(source_avail_to_issue_seconds / 60.0, 2) if source_avail_to_issue_seconds else None,
+                "observation_period_end_to_issue_seconds": obs_period_end_to_issue_seconds,
+                "observation_period_end_to_issue_minutes": round(obs_period_end_to_issue_seconds / 60.0, 2) if obs_period_end_to_issue_seconds else None,
+                "scoring_compute_latency_ms": mean_scoring_latency_ms,
+                "data_transmission_cadence_hours": 24.0,
+            },
+            "first_matched_alert_timestamps": matched_timestamps,
         },
         "episodes": detailed_episodes,
     }
@@ -481,6 +587,7 @@ def run_chronological_replay(
         ref_event=ref,
         policy_name="fused_corroborated",
         start_date=start_date,
+        scenario_seed=seed,
     )
     if output_path:
         out_file = Path(output_path)
@@ -493,14 +600,18 @@ def run_comprehensive_replay_suite(output_path: str = "fixtures/replay_evaluatio
     """Runs multi-scenario, multi-policy auditable evaluation under CDC evaluation rules."""
     start_date = datetime(2026, 6, 1, 0, 0, 0, tzinfo=timezone.utc)
 
-    grad_df, grad_ref = ScenarioGenerator.generate_heat_gradual_scenario(start_date=start_date, days=45, seed=42)
-    abrupt_df, abrupt_ref = ScenarioGenerator.generate_heat_abrupt_extreme_scenario(start_date=start_date, days=45, seed=101)
-    spurious_df, spurious_ref = ScenarioGenerator.generate_spurious_health_spike_scenario(start_date=start_date, days=45, seed=202)
+    grad_seed = 42
+    abrupt_seed = 101
+    spurious_seed = 202
+
+    grad_df, grad_ref = ScenarioGenerator.generate_heat_gradual_scenario(start_date=start_date, days=45, seed=grad_seed)
+    abrupt_df, abrupt_ref = ScenarioGenerator.generate_heat_abrupt_extreme_scenario(start_date=start_date, days=45, seed=abrupt_seed)
+    spurious_df, spurious_ref = ScenarioGenerator.generate_spurious_health_spike_scenario(start_date=start_date, days=45, seed=spurious_seed)
 
     scenarios = {
-        "heat-gradual": (grad_df, grad_ref),
-        "heat-abrupt-extreme": (abrupt_df, abrupt_ref),
-        "spurious-health-spike": (spurious_df, spurious_ref),
+        "heat-gradual": (grad_df, grad_ref, grad_seed),
+        "heat-abrupt-extreme": (abrupt_df, abrupt_ref, abrupt_seed),
+        "spurious-health-spike": (spurious_df, spurious_ref, spurious_seed),
     }
 
     policies = ["environmental_only", "health_only", "fused_corroborated"]
@@ -509,17 +620,20 @@ def run_comprehensive_replay_suite(output_path: str = "fixtures/replay_evaluatio
         "evaluation_title": "SentinelHealth Auditable Replay Evaluation Suite",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "disclaimer": "This prototype has not undergone clinical validation, production security assessment or jurisdiction-specific legal/compliance review.",
-        "cdc_evaluation_rules": [
-            "Detection delay is computed strictly from the first eligible alert that matches the ground-truth event window.",
-            "Pre-event false alarms (spurious baseline Poisson fluctuations) are reported separately and NEVER credited as early warning lead time.",
-            "If an event has zero matched alerts, detection delay is reported as null/unavailable (event missed), NOT zero.",
-            "Timestamps for observation period end, source availability, ingestion, scoring, alert issue, and task acknowledgment are tracked separately without adding batch cadence blindly.",
+        "cdc_evaluation_guidelines": [
+            "Alerts receive early-warning credit only when they satisfy the predefined event-matching and useful-action criteria. Unmatched alerts are reported separately.",
+            "Predefined criteria specify eligible pre-onset lead window (<= 2 days prior to onset), matching hazard, and matching geography before evaluation.",
+            "Forecast replay inputs must strictly reflect forecasts available at decision time without lookahead.",
+            "Observation-time detection delay (data date) and issue-time detection delay (operational alert dispatch timestamp) are evaluated and reported separately.",
+            "Direct latency between source availability and alert issuance is calculated exactly (e.g. 10m 2s), without conflating daily batch cadence.",
+            "Environmental-only policy produces an environmental exposure watch without health corroboration.",
+            "In a null scenario with no reference event, unmatched alerts are reported as false alarms without claiming a true event was rejected.",
         ],
         "scenario_evaluations": {},
         "policy_comparisons": {},
     }
 
-    for sc_name, (sc_df, sc_ref) in scenarios.items():
+    for sc_name, (sc_df, sc_ref, s_seed) in scenarios.items():
         suite_results["scenario_evaluations"][sc_name] = {}
         for pol in policies:
             eval_res = simulate_scenario(
@@ -528,6 +642,7 @@ def run_comprehensive_replay_suite(output_path: str = "fixtures/replay_evaluatio
                 ref_event=sc_ref,
                 policy_name=pol,
                 start_date=start_date,
+                scenario_seed=s_seed,
             )
             suite_results["scenario_evaluations"][sc_name][pol] = eval_res
 
@@ -536,7 +651,7 @@ def run_comprehensive_replay_suite(output_path: str = "fixtures/replay_evaluatio
         total_episodes = 0
         total_matched = 0
         total_unmatched = 0
-        false_alarms_in_null = 0
+        unmatched_in_null = 0
         scenario_timeliness: Dict[str, Any] = {}
 
         for sc_name in scenarios:
@@ -549,12 +664,13 @@ def run_comprehensive_replay_suite(output_path: str = "fixtures/replay_evaluatio
             total_unmatched += rec["unmatched_alert_episodes"]
 
             if sc_name == "spurious-health-spike":
-                false_alarms_in_null = rec["total_alert_episodes"]
+                unmatched_in_null = rec["unmatched_alert_episodes"]
 
             scenario_timeliness[sc_name] = {
-                "detection_delay_days": perf["detection_delay_days"],
-                "detection_status": perf["detection_delay_status"],
-                "useful_action_lead_days": perf["useful_action_lead_days"],
+                "observation_time_delay_days": perf["observation_time_detection_delay_days"],
+                "issue_time_delay_days": perf["issue_time_detection_delay_days"],
+                "observation_status": perf["observation_delay_status"],
+                "issue_status": perf["issue_delay_status"],
                 "matched_episodes": rec["matched_alert_episodes"],
                 "unmatched_episodes": rec["unmatched_alert_episodes"],
             }
@@ -563,15 +679,24 @@ def run_comprehensive_replay_suite(output_path: str = "fixtures/replay_evaluatio
             "total_alert_episodes_across_scenarios": total_episodes,
             "matched_episodes": total_matched,
             "unmatched_episodes": total_unmatched,
-            "false_alarms_in_null_scenario": false_alarms_in_null,
+            "unmatched_alerts_in_null_scenario": unmatched_in_null,
             "scenario_timeliness": scenario_timeliness,
-            "cdc_operational_tradeoff": (
-                "High sensitivity for physical hazard threshold exceedances; triggers on Day 32 in gradual heat (+1 day delay) and Day 26 in abrupt shock (0-day delay); 0 false alarms in null scenario, but completely blind to clinical impact."
+            "policy_classification": (
+                "environmental_exposure_watch"
                 if pol == "environmental_only"
                 else (
-                    "Alerts on onset day (Day 31 in gradual heat, 0-day delay; Day 26 in abrupt shock, 0-day delay). However, generates 6 pre-event false alarms and 1 false alarm episode in null scenario; vulnerable to non-environmental noise."
+                    "uncorroborated_health_anomaly"
                     if pol == "health_only"
-                    else "Filters spurious clinical spikes; in gradual heat produces corroborated warning on Day 32 (+1 day delay, post-onset detection); in abrupt shock alerts immediately on Day 26 (0-day delay); 0 false warnings in null scenario."
+                    else "fused_corroborated_warning"
+                )
+            ),
+            "operational_tradeoff_summary": (
+                "Environmental exposure watch: triggers on physical threshold exceedance (Day 32 in gradual heat, Day 26 in abrupt shock); 0 unmatched alerts in null scenario, but lacks clinical or workforce corroboration."
+                if pol == "environmental_only"
+                else (
+                    "Uncorroborated health anomaly: detects clinical surge on onset day (Day 31 in gradual heat, Day 26 in abrupt shock); vulnerable to non-environmental noise, generating pre-onset baseline false alarms and 1 unmatched alert in null scenario."
+                    if pol == "health_only"
+                    else "Fused corroborated warning: corroborates physical exposure with health/workforce impact; triggers corroborated warning on Day 32 in gradual heat (+1 day observation delay, ~2 day issue delay; post-onset detection) and Day 26 in abrupt shock (0-day delay); 0 unmatched warnings in null scenario."
                 )
             ),
         }
@@ -591,4 +716,3 @@ if __name__ == "__main__":
     results = run_comprehensive_replay_suite(output_path=args.output)
     print("\n[+] Replay Suite Execution Summary:")
     print(f"Scenarios evaluated: {list(results['scenario_evaluations'].keys())}")
-    print(f"Policy comparisons: {json.dumps(results['policy_comparisons'], indent=2)}")

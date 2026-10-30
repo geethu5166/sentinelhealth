@@ -38,3 +38,4 @@ for d in range(14, 45):
     dec = fusion_engine.evaluate("heat_illness", evidences, {"apparent_temperature": 39.0})
     if dec.should_alert or d in [30, 31, 32]:
         print(f"Day {d} ({sim_time.strftime('%Y-%m-%d')}): Temp={w:.2f} (thresh=39.0), Health={h:.0f} (z={h_score.standardised_residual:.2f}), Abs={a:.0f} (z={a_score.standardised_residual:.2f}) -> Alert={dec.should_alert}, Class={dec.evidence_class}, Sev={dec.severity}")
+

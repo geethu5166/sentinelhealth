@@ -55,3 +55,4 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.execute("ALTER TABLE signal_records DROP CONSTRAINT IF EXISTS uq_signal_records_idempotency;")
+
