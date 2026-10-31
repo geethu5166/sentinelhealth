@@ -133,6 +133,7 @@ export interface TaskSummary {
   priority: number;
   due_at?: string;
   completed_at?: string;
+  completion_evidence?: string;
   approval_required: boolean;
   created_at: string;
 }

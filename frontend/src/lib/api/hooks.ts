@@ -107,3 +107,10 @@ export function useUpdateTask() {
   });
 }
 
+export function useReplaySummary() {
+  return useQuery<any>({
+    queryKey: ["replay-summary"],
+    queryFn: () => apiFetch<any>("/validation/summary"),
+  });
+}
+

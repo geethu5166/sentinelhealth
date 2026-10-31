@@ -104,3 +104,4 @@ def test_reference_event_sensitivity_counts_unique_events(replay_fixtures):
         assert set(pol_summary["event_sensitivity"]["detected_reference_events"]) == detected_events
         assert pol_summary["event_sensitivity"]["total_reference_events"] == len(all_ref_ids)
         assert pol_summary["event_sensitivity"]["event_sensitivity"] == round(len(detected_events) / len(all_ref_ids), 4)
+

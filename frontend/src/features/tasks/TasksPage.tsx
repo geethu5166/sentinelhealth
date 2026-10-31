@@ -15,6 +15,15 @@ export const TasksPage: React.FC = () => {
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
   const [evidenceText, setEvidenceText] = useState<string>("");
 
+  const handleAcknowledgeTask = async (taskId: string) => {
+    await updateTaskMutation.mutateAsync({
+      taskId,
+      payload: {
+        status: "in_progress",
+      },
+    });
+  };
+
   const handleCompleteTask = async (taskId: string) => {
     if (!evidenceText) return;
     await updateTaskMutation.mutateAsync({
@@ -118,6 +127,8 @@ export const TasksPage: React.FC = () => {
                         className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded border ${
                           t.status === "completed"
                             ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 border-emerald-300"
+                            : t.status === "in_progress"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200 border-blue-300"
                             : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 border-amber-300"
                         }`}
                       >
@@ -129,6 +140,14 @@ export const TasksPage: React.FC = () => {
                       <div className="text-[11px] text-muted-foreground">
                         {t.approval_required ? "• Requires Occupational Health sign-off" : "• Routine operational task"}
                       </div>
+                      {t.completion_evidence && (
+                        <div className="mt-1.5 text-[11px] font-mono text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 p-1.5 rounded border border-emerald-200 dark:border-emerald-800 flex items-start gap-1.5">
+                          <ShieldCheck className="h-3.5 w-3.5 mt-0.5 shrink-0 text-emerald-600" />
+                          <span>
+                            <strong>Recorded Evidence:</strong> {t.completion_evidence}
+                          </span>
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="capitalize text-xs text-muted-foreground">
                       {t.assigned_role.replace(/_/g, " ")}
@@ -140,16 +159,29 @@ export const TasksPage: React.FC = () => {
                       {t.due_at ? formatTimestamp(t.due_at) : "Immediate"}
                     </TableCell>
                     <TableCell className="text-right">
-                      {t.status !== "completed" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-xs h-7"
-                          onClick={() => setCompletingTaskId(t.id)}
-                        >
-                          <CheckCircle className="h-3.5 w-3.5 mr-1 text-emerald-500" /> Complete
-                        </Button>
-                      )}
+                      <div className="flex items-center justify-end gap-1.5">
+                        {t.status === "pending" && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="text-xs h-7 px-2"
+                            disabled={updateTaskMutation.isPending}
+                            onClick={() => handleAcknowledgeTask(t.id)}
+                          >
+                            <Clock className="h-3.5 w-3.5 mr-1 text-blue-600" /> Acknowledge
+                          </Button>
+                        )}
+                        {t.status !== "completed" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-7 px-2"
+                            onClick={() => setCompletingTaskId(t.id)}
+                          >
+                            <CheckCircle className="h-3.5 w-3.5 mr-1 text-emerald-500" /> Complete
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

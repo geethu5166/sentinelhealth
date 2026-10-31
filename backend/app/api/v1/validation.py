@@ -38,6 +38,34 @@ async def list_replay_runs(
     return runs
 
 
+@router.get("/summary")
+async def get_replay_summary(
+    current_user: UserInfo = Depends(get_current_user),
+):
+    """Retrieves the full Phase 4 CDC-aligned replay evaluation summary across 15 benchmark scenarios."""
+    import json
+    from pathlib import Path
+
+    summary_file = Path(__file__).resolve().parent.parent.parent.parent / "fixtures" / "replay_evaluation_summary.json"
+    if not summary_file.exists():
+        # Fallback to backend/fixtures
+        summary_file = Path("fixtures/replay_evaluation_summary.json")
+
+    if not summary_file.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Replay evaluation summary not generated")
+
+    with open(summary_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Attach multiseed summary if present
+    ms_file = summary_file.parent / "replay_evaluation_multiseed.json"
+    if ms_file.exists():
+        with open(ms_file, "r", encoding="utf-8") as f:
+            data["multiseed_summary"] = json.load(f)
+
+    return data
+
+
 @router.get("/runs/{run_id}")
 async def get_replay_run(
     run_id: uuid.UUID,
