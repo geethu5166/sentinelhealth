@@ -42,3 +42,23 @@ def test_poisson_baseline_fit():
     assert pred.expected_value > 0.0
     assert pred.prediction_interval_lower <= pred.expected_value <= pred.prediction_interval_upper
 
+
+def test_poisson_baseline_all_zero_series():
+    """Verify that PoissonCountBaseline gracefully handles all-zero historical series without crashing."""
+    start = datetime(2026, 6, 1, tzinfo=timezone.utc)
+    data = []
+    for d in range(25):
+        t = start + timedelta(days=d)
+        data.append({"timestamp": t, "value": 0.0, "exposure": 1000})
+
+    model = PoissonCountBaseline(min_samples=14)
+    df = pd.DataFrame(data)
+
+    target_time = start + timedelta(days=25)
+    pred = model.fit_predict(df, target_time, current_exposure=1000)
+
+    assert pred.expected_value == 0.0
+    assert pred.model_type in ["poisson_all_zero", "recent_history"]
+    assert pred.diagnostics["status"] in ["all_zeros_observed", "ok"]
+
+

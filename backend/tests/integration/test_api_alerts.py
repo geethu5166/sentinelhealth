@@ -41,3 +41,13 @@ async def test_cross_tenant_alert_isolation(
     ids_b = {b["id"] for b in alerts_b}
     assert ids_a.isdisjoint(ids_b)
 
+
+@pytest.mark.asyncio
+async def test_invalid_hazard_query_parameter_rejected_422(client: AsyncClient, auth_headers: dict):
+    """API must strictly reject unknown or misspelled hazard enum parameters with HTTP 422."""
+    response = await client.get("/api/v1/alerts?hazard=misspelled_hazard_xyz", headers=auth_headers)
+    assert response.status_code == 422
+    data = response.json()
+    assert "Invalid hazard" in data["detail"]
+
+

@@ -1,0 +1,86 @@
+{
+  "evaluation_title": "SentinelHealth Multi-Seed Robustness Evaluation",
+  "generated_at": "2026-10-31T17:40:55.580114+00:00",
+  "disclaimer": "This prototype has not undergone clinical validation, production security assessment or jurisdiction-specific legal/compliance review.",
+  "seeds_evaluated": [
+    101,
+    102,
+    103,
+    104,
+    105
+  ],
+  "sample_size": 5,
+  "chronological_splits": {
+    "burn_in_training_days": 14,
+    "held_out_evaluation_days": 31,
+    "total_simulation_days": 45
+  },
+  "metrics_summary": {
+    "crisis_event_sensitivity": {
+      "median": 1.0,
+      "min": 1.0,
+      "max": 1.0,
+      "display": "100.0% (range 100.0% - 100.0%)"
+    },
+    "gradual_heat_issue_delay_hours": {
+      "median": 48.25,
+      "min": 24.25,
+      "max": 72.25,
+      "display": "48.2h (range 24.2h - 72.2h)"
+    },
+    "abrupt_heat_issue_delay_hours": {
+      "median": 12.25,
+      "min": 12.25,
+      "max": 12.25,
+      "display": "12.2h (range 12.2h - 12.2h)"
+    },
+    "aq_surge_issue_delay_hours": {
+      "median": 24.25,
+      "min": 24.25,
+      "max": 24.25,
+      "display": "24.2h (range 24.2h - 24.2h)"
+    }
+  },
+  "seed_records": [
+    {
+      "seed": 101,
+      "crisis_sensitivity": 1.0,
+      "gradual_heat_issue_delay_hours": 72.2496,
+      "abrupt_heat_issue_delay_hours": 12.2496,
+      "aq_surge_issue_delay_hours": 24.2496,
+      "null_scenario_false_alarms": 0
+    },
+    {
+      "seed": 102,
+      "crisis_sensitivity": 1.0,
+      "gradual_heat_issue_delay_hours": 48.2496,
+      "abrupt_heat_issue_delay_hours": 12.2496,
+      "aq_surge_issue_delay_hours": 24.2496,
+      "null_scenario_false_alarms": 1
+    },
+    {
+      "seed": 103,
+      "crisis_sensitivity": 1.0,
+      "gradual_heat_issue_delay_hours": 24.2496,
+      "abrupt_heat_issue_delay_hours": 12.2496,
+      "aq_surge_issue_delay_hours": 24.2496,
+      "null_scenario_false_alarms": 1
+    },
+    {
+      "seed": 104,
+      "crisis_sensitivity": 1.0,
+      "gradual_heat_issue_delay_hours": 24.2496,
+      "abrupt_heat_issue_delay_hours": 12.2496,
+      "aq_surge_issue_delay_hours": 24.2496,
+      "null_scenario_false_alarms": 1
+    },
+    {
+      "seed": 105,
+      "crisis_sensitivity": 1.0,
+      "gradual_heat_issue_delay_hours": 48.2496,
+      "abrupt_heat_issue_delay_hours": 12.2496,
+      "aq_surge_issue_delay_hours": 24.2496,
+      "null_scenario_false_alarms": 2
+    }
+  ]
+}

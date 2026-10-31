@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import warnings
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -138,12 +139,27 @@ class PoissonCountBaseline:
         X = sm.add_constant(X)
         y = hist["value"].astype(float).values
 
+        # Explicit handling of all-zero count series: avoid GLM separation boundary
+        if float(np.sum(y)) == 0.0:
+            return BaselinePrediction(
+                expected_value=0.0,
+                standard_error=0.1,
+                prediction_interval_lower=0.0,
+                prediction_interval_upper=0.5,
+                model_type="poisson_all_zero",
+                model_version=self.version,
+                diagnostics={"status": "all_zeros_observed", "sample_size": len(hist)},
+            )
+
         exposure = hist.get("exposure")
         offset = np.log(exposure.astype(float).values) if exposure is not None and not exposure.isna().all() else None
 
         try:
-            model = sm.GLM(y, X, family=sm.families.Poisson(), offset=offset)
-            res = model.fit(disp=False)
+            with warnings.catch_warnings():
+                from statsmodels.tools.sm_exceptions import PerfectSeparationWarning
+                warnings.simplefilter("ignore", category=PerfectSeparationWarning)
+                model = sm.GLM(y, X, family=sm.families.Poisson(), offset=offset)
+                res = model.fit(disp=False)
 
             # Predict for target day
             target_weekday = target_timestamp.weekday()

@@ -105,15 +105,15 @@ class EvidenceFusionEngine:
             if ev.is_quarantined or ev.status == "quarantined":
                 data_state_flags.append(f"quarantined_input:{ev.metric_code}")
                 reasons.append(f"Signal {ev.metric_code} is quarantined due to data quality flags; excluded from scoring.")
+            elif ev.status in ["missing", "insufficient_data"]:
+                data_state_flags.append(f"missing_input:{ev.metric_code}")
+                reasons.append(f"Signal {ev.metric_code} has insufficient or missing data; not assumed to be zero.")
             elif ev.is_stale or ev.status == "stale":
                 data_state_flags.append(f"stale_input:{ev.metric_code}")
                 reasons.append(f"Signal {ev.metric_code} is stale ({ev.source_freshness_minutes}m old); treated as unavailable, not zero.")
             elif ev.is_suppressed or ev.status == "suppressed":
                 data_state_flags.append(f"suppressed_input:{ev.metric_code}")
                 reasons.append(f"Signal {ev.metric_code} is privacy-suppressed; cannot confirm elevation without unsuppressed denominator/counts.")
-            elif ev.status in ["missing", "insufficient_data"]:
-                data_state_flags.append(f"missing_input:{ev.metric_code}")
-                reasons.append(f"Signal {ev.metric_code} has insufficient or missing data; not assumed to be zero.")
             else:
                 valid_evidences.append(ev)
 

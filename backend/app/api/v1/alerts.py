@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.alerts.service import AlertService
 from app.auth.dependencies import get_current_user
 from app.db.session import get_db
-from app.models.alert import Alert, AlertEvidence, AlertStateEvent
+from app.models.alert import Alert, AlertEvidence, AlertStateEvent, Hazard
 from app.models.playbook import Recommendation
 from app.privacy.suppression import default_disclosure_checker
 from app.schemas.alert import (
@@ -42,7 +42,14 @@ async def list_alerts(
         .where(Alert.tenant_id == current_user.current_tenant_id)
     )
     if hazard:
-        query = query.where(Alert.hazard == hazard)
+        try:
+            validated_hazard = Hazard(hazard)
+        except ValueError:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Invalid hazard: '{hazard}'. Allowed values: {[h.value for h in Hazard]}",
+            )
+        query = query.where(Alert.hazard == validated_hazard)
     if severity:
         query = query.where(Alert.severity == severity)
     if alert_status:
