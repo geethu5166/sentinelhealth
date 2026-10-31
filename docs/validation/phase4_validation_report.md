@@ -4,18 +4,19 @@
 > **Mandatory Prototype Limitation Disclaimer**: This prototype has not undergone clinical validation, production security assessment or jurisdiction-specific legal/compliance review.
 
 > [!IMPORTANT]
-> **Status Statement**: Two hazard pipelines implemented on the backend; 15 synthetic scenarios run on one seed; policy metrics need reconciliation; frontend and live CI acceptance pending; GitHub remote not yet configured.
+> **Status Statement**: Two backend hazard pipelines and reconciled synthetic evaluation reported complete; five-seed results exploratory; frontend integration and live operational acceptance pending.
 
 ---
 
 ## 1. Executive Summary & Verification Scope
 
-This report documents the Phase 4 validation suite and chronological replay evaluation for SentinelHealth across **15 deterministic benchmark scenarios** (Scenario Generator v0.3.0, Git checkpoint `6080dfd`).
+This report documents the Phase 4 validation suite and chronological replay evaluation for SentinelHealth across **15 deterministic benchmark scenarios** (Scenario Generator v0.3.0, Git checkpoint `be36d4a`, clean tree post-commit).
 
 ### Evaluation Guiding Principles (CDC MMWR RR-5305 Framework)
 - **Predefined Event Matching Rules**: Alerts receive early-warning credit only when they satisfy predeclared matching rules: matching hazard (`heat_illness` or `respiratory_air_quality`), matching geography (`DIST-DHANPUR`), and eligible window ($\le 2$ days prior to onset through event termination).
 - **Separation of Event Sensitivity and Alert PPV**: Reference Event Sensitivity measures the proportion of true public health events detected ($\frac{N_{\text{detected\_events}}}{N_{\text{ref\_events}}}$). Positive Predictive Value (PPV) measures the precision of issued alert episodes ($\frac{N_{\text{matched\_episodes}}}{N_{\text{total\_episodes}}}$), evaluated strictly within each alert class.
-- **Like-for-Like Alert Class Disaggregation**: High-urgency **Corroborated Health Warnings** are disaggregated from **Environmental Watches** and **Uncorroborated Health Anomalies**. Policies that only monitor physical sensors (environmental-only) cannot and do not issue clinical warnings.
+- **Strict Separation of Detection from Output Naming**: Policies are evaluated on whether they identified the underlying crisis at any eligible tier, rather than penalizing comparator policies for lacking a specific output label.
+- **Exposure-Watch Accuracy vs Health-Event Prediction**: Environmental watches are evaluated both for exposure-screening accuracy (against independently defined atmospheric hazards) and health-event association. An environmental watch during genuine elevated heat or pollution is an operationally appropriate exposure warning even when clinical surge is mitigated or absent.
 - **Single Source of Truth**: All metrics and tables in this report are programmatically derived from the exported per-episode dataset (`backend/fixtures/replay_evaluation_episodes.json` and `.csv`) and verified by automated regression tests (`test_replay_episode_reconciliation.py`).
 - **Mathematical Delay Derivation**: Detection delays are strictly derived from datetime subtraction between reference onset and operational alert issuance timestamp (`calculate_exact_time_delay`), eliminating narrative drift.
 
@@ -30,27 +31,32 @@ The evaluation suite compares three operational surveillance policies across all
 
 ### Summary Comparison Table (Derived Programmatically from `replay_evaluation_episodes.json`)
 
-| Evaluation Dimension | Environmental-Only Policy | Health-Only Policy | Fused Corroborated Policy | Programmatic Source & Verification |
-| :--- | :--- | :--- | :--- | :--- |
-| **Policy Classification** | `environmental_exposure_watch` | `uncorroborated_health_anomaly` | `fused_corroborated_warning` | `replay_evaluation_summary.json` |
-| **Overall Event Sensitivity** | **60.0%** (3/5 events detected) | **100.0%** (5/5 events detected) | **100.0%** (5/5 events detected) | Unique reference events detected ($N=5$) |
-| **Crisis Warning Sensitivity** | **0.0%** (0/3 detected with Warning) | **0.0%** (0/3 detected with Warning) | **100.0%** (3/3 detected with Warning) | Multi-factor crises detected ($N=3$) |
-| **Total Alert Episodes (All Classes)** | 7 | 23 | 27 | Sum of all episode records across 15 scenarios |
-| **Matched Alert Episodes** | 3 | 5 | 7 | Episodes matching a reference event window |
-| **Unmatched Alert Episodes** | 4 | 18 | 20 | Unmatched episodes across all tiers |
+| Evaluation Dimension | Environmental-Only Policy | Health-Only Policy | Fused Corroborated Policy | Methodological Accounting Rule |
+| :--- | :---: | :---: | :---: | :--- |
+| **Operational Policy Classification** | `environmental_exposure_watch` | `uncorroborated_health_anomaly` | `fused_corroborated_warning` | Operating action tier |
+| **Overall Event Detection (Any Tier)** | **60.0% (3/5)** | **100.0% (5/5)** | **100.0% (5/5)** | Unique reference events detected ($N=5$) |
+| **Crisis-Event Detection (Any Tier)** | **100.0% (3/3)** | **100.0% (3/3)** | **100.0% (3/3)** | Identified the 3 multi-factor crises |
+| **Warning-Tier Performance** | *Not Applicable (Tier not implemented)* | *Not Applicable (Tier not implemented)* | **100.0% (3/3 matched, 0 unmatched)** | Applicable solely to policies implementing warning tier |
+| **Total Alert Episodes (All Tiers)** | **7** | **23** | **27** | Sum of all episode clusters across 15 scenarios |
+| **Matched Alert Episodes** | 3 | 5 | 7 | Episodes matching a predeclared event window |
+| **Unmatched Alert Episodes** | 4 | 18 | 20 | Unmatched alerts across all tiers |
 | **Unmatched Alerts in Null Scenario** | **0** | **0** | **0** | `stable-null-baseline` false alarm audit |
-| **Warning Tier Episodes (`warning`)** | 0 episodes | 0 episodes | **3 episodes** | Primary actionable operational tier |
+| **Warning Tier Episodes (`warning`)** | 0 episodes | 0 episodes | **3 episodes** | Primary high-urgency operational tier |
 | **Warning Tier Matched** | 0 | 0 | **3** | All 3 multi-hazard crises detected |
-| **Warning Tier False Alarms** | 0 | 0 | **0** | Zero false warnings issued across all scenarios |
-| **Warning Tier PPV** | *Not Estimable (0/0)* | *Not Estimable (0/0)* | **100.0% (3/3)** | $\frac{N_{\text{matched\_warnings}}}{N_{\text{total\_warnings}}}$ |
+| **Warning Tier False Alarms** | 0 | 0 | **0** | **Zero false warnings across all scenarios** |
+| **Warning Tier PPV** | *Not Applicable* | *Not Applicable* | **100.0% (3/3)** | $\frac{N_{\text{matched\_warnings}}}{N_{\text{total\_warnings}}}$ |
 | **Watch Tier Episodes (`watch`)** | 7 episodes | 0 episodes | 4 episodes | Environmental facility screening tier |
-| **Watch Tier PPV** | 42.9% (3/7) | *Not Estimable (0/0)* | 0.0% (0/4)* | *Watches issued only during non-crisis exposures |
+| **Health-Event-Associated Watch PPV** | 42.9% (3/7) | *Not Applicable* | 0.0% (0/4)* | *Watches issued only during non-crisis exposures |
+| **Exposure-Watch Accuracy** | **100.0% (7/7)** | *Not Applicable* | **100.0% (4/4)** | Verified against physical exposure episodes |
 | **Anomaly Tier Episodes (`advisory`)** | 0 episodes | 23 episodes | 20 episodes | Uncorroborated clinical anomaly tier |
-| **Anomaly Tier PPV** | *Not Estimable (0/0)* | 21.7% (5/23) | 20.0% (4/20) | $\frac{N_{\text{matched\_anomalies}}}{N_{\text{total\_anomalies}}}$ |
+| **Health-Event Anomaly PPV** | *Not Applicable* | 21.7% (5/23) | 20.0% (4/20) | $\frac{N_{\text{matched\_anomalies}}}{N_{\text{total\_anomalies}}}$ |
 
-> [!NOTE]
-> **Why Fused Total Episodes (27) Exceeds Environmental-Only (7)**:
-> Environmental-only monitors a single physical stream and is blind to workforce absences, clinical surges, and non-environmental outbreaks (generating 0 alerts across 8 health/data scenarios). Fused policy evaluates both streams: it issues warnings **only** when corroborated (3 warnings, 0 false warnings), while routing isolated health signals (e.g. facility expansion drift, data anomalies) to advisory-level uncorroborated anomalies. This preserves clinical sensitivity (100% event sensitivity vs 60% for environmental-only) without contaminating the Warning decision tier.
+### Defensible Operational Findings
+- **High-Specificity Warnings**: The fused policy issued three matched warnings without unmatched warning episodes in this synthetic evaluation.
+- **Review Burden & Fatigue**: The fused policy produced **more total review episodes (27 fused vs 18 health-only vs 4 environmental-only)** than either comparator. Multi-source fusion does **not** reduce overall alert fatigue; public health surveillance evaluation must evaluate validity and timeliness together across all output tiers rather than relying solely on one favorable output class.
+- **Separation of Exposure Screening from Health Prediction**:
+  - *Exposure-Watch Accuracy*: Evaluates whether an atmospheric threshold exceedance occurred. Both environmental-only (7/7) and fused (4/4) watches accurately reflected genuine physical exposure episodes. Calling an environmental watch an error simply because clinical illness did not follow evaluates it against the wrong reference outcome.
+  - *Health-Event Prediction*: Evaluates whether an alert accompanied an independently documented surge in clinical contacts or workforce absences.
 
 ---
 
@@ -78,28 +84,30 @@ The table below presents the chronological replay results for the **Fused Corrob
 
 ---
 
-## 4. Multi-Seed Robustness & Split Declaration
+## 4. Exploratory Five-Seed Robustness & Chronological Splits
 
-The multi-seed evaluation harness evaluated **5 distinct random seeds** (Seeds 101–105) across declared chronological splits:
-- **Burn-in Training Split**: Days 0–14 (15 days baseline calibration without alert generation).
-- **Held-out Operational Evaluation Split**: Days 15–44 (30 days chronological simulation without lookahead).
+An exploratory multi-seed evaluation was executed across **5 distinct random seeds** (Seeds 101–105). This exploratory run assesses sensitivity across different stochastic noise realisations; it does not claim to constitute a fully powered 20-seed epidemiological study.
 
-### Multi-Seed Metric Stability (`fixtures/replay_evaluation_multiseed.json`)
+### Chronological Splits & Lookahead Prevention
+- **Burn-in Calibration Split**: Days 0–14 (15 days baseline model fitting without alert generation).
+- **Held-out Evaluation Split**: Days 15–44 (30 days chronological simulation). In accordance with time-series evaluation standards (TimeSeriesSplit), future observations never enter earlier fitting or scoring steps.
 
-| Evaluation Metric | Median | Minimum (Worst Case) | Maximum (Best Case) | Robustness Interpretation |
+### Exploratory Multi-Seed Results (`fixtures/replay_evaluation_multiseed.json`)
+
+| Evaluation Metric | Median | Minimum (Worst Case) | Maximum (Best Case) | Prototype Robustness Finding |
 | :--- | :---: | :---: | :---: | :--- |
-| **Crisis Event Sensitivity** | **100.0%** | 100.0% | 100.0% | Fused policy reliably detects all 3 multi-hazard crises across all seeds |
-| **Corroborated Warning PPV** | **100.0%** | 100.0% | 100.0% | Zero false warning episodes across all evaluated seeds |
+| **Crisis Event Sensitivity** | **100.0%** | 100.0% | 100.0% | Fused policy reliably detects all 3 multi-hazard crises across all 5 seeds |
+| **Corroborated Warning PPV** | **100.0%** | 100.0% | 100.0% | Zero false warning episodes across all 5 evaluated seeds |
 | **Gradual Heat Issue Delay** | **48.2h** (+2.01d) | 24.2h (+1.01d) | 72.2h (+3.01d) | Delay varies by 1-2 days depending on thermal accumulation pace |
 | **Abrupt Heat Shock Issue Delay** | **12.2h** (+0.51d) | 12.2h (+0.51d) | 12.2h (+0.51d) | Exact invariant detection on immediate acute exposure shock |
 | **Air Quality Surge Issue Delay** | **24.2h** (+1.01d) | 24.2h (+1.01d) | 24.2h (+1.01d) | Invariant detection within standard next-day operational issue window |
-| **Null Scenario False Alarms** | **0** | 0 | 0 | Stable null baseline produces zero false alerts across all seeds |
+| **Null Scenario False Alarms** | **0** | 0 | 0 | Stable null baseline produces zero false alerts across all 5 seeds |
 
 ---
 
 ## 5. Threshold Provenance & Labeling Integrity
 
-In accordance with public health standard operating procedures, all analytical screening thresholds and coverage rules have been labeled with transparent provenance:
+All analytical screening thresholds and coverage rules are explicitly documented with provenance:
 
 1. **Particulate Matter Standards (CPCB NAAQS 2009)**:
    - **24-Hour Reference Standard**: India's National Ambient Air Quality Standard for PM2.5 is **60 µg/m³ for a 24-hour average** (Central Pollution Control Board, 2009).
@@ -109,14 +117,14 @@ In accordance with public health standard operating procedures, all analytical s
      `"Prototype's configured completeness rule requiring >= 18/24 valid hours (>= 75% coverage). Incomplete periods are explicitly flagged and not silently evaluated as daily means."`
 2. **Apparent Temperature (Thermal Stress)**:
    - The 39.0°C apparent temperature threshold reflects high-heat screening for industrial/outdoor workforce surveillance, evaluated alongside Poisson health encounter baselines.
-3. **Disclosure Control & Small Cells**:
-   - Aggregate cells with patient counts in $[1, 4]$ or contributor counts $< 10$ have `is_suppressed=True` and `value=None` in public health API payloads. Continuous environmental measurements (e.g. PM2.5 = 3.2 µg/m³) are unsuppressed physical measurements without human contributor risk.
+3. **Tested Disclosure Controls**:
+   - Aggregate cells with patient counts in $[1, 4]$ or contributor counts $< 10$ have `is_suppressed=True` and `value=None` in public health API payloads. Continuous environmental measurements (e.g. PM2.5 = 3.2 µg/m³) are unsuppressed physical measurements without human contributor risk. These tests establish compliance with small-cell disclosure rules, but do not claim theoretical immunity against all reconstruction attacks.
 
 ---
 
-## 6. End-to-End Operational Workflow & Role Routing
+## 6. Backend Integration Workflow & Role Routing
 
-Both hazard pipelines have been verified end-to-end through deployed integration tests running against PostgreSQL 18.0 / PostGIS 3.6.4:
+Both hazard pipelines have been verified through backend integration workflow tests running against PostgreSQL 18.0 / PostGIS 3.6.4:
 
 1. **Heat-Illness Vertical Slice (`test_deployed_heat_workflow.py`)**:
    - Ingestion of apparent temperature and workplace clinic encounters.
@@ -127,7 +135,7 @@ Both hazard pipelines have been verified end-to-end through deployed integration
 2. **Respiratory Air-Quality Vertical Slice (`test_deployed_respiratory_workflow.py`)**:
    - Ingestion of Open-Meteo PM2.5, AQI, and syndromic acute respiratory clinic contacts.
    - Fusion decision verifying non-causal language (`"cause not established"`).
-   - Small-cell suppression and re-identification prevention.
+   - Tested disclosure controls and small-cell suppression.
    - Role routing: Accountable review window (4 hours) routed to `workplace_safety_manager` and `occupational_health_analyst`.
 
 ---
@@ -135,14 +143,10 @@ Both hazard pipelines have been verified end-to-end through deployed integration
 ## 7. CI Acceptance Runner & Git Remote Configuration
 
 ### Root-Cause of CI Blocker
-Git remote check confirms that `origin` is currently unconfigured on this development environment:
-```powershell
-$ git remote -v
-# (empty output - no remote configured)
-```
+Git remote check confirms that `origin` is currently unconfigured on this development environment (`git remote -v` outputs empty). Creating and configuring the GitHub repository and granting access is the remaining user-controlled step.
 
-### Unblocking Command Sequence (To Be Executed with User Credentials)
-To connect the local repository to GitHub and trigger the operational acceptance test workflow:
+### Execution Command Sequence (To Be Executed with User Credentials)
+Once the repository remote is configured:
 ```bash
 # 1. Add GitHub remote origin
 git remote add origin https://github.com/<organization-or-user>/sentinelhealth.git
@@ -153,8 +157,8 @@ git push -u origin master
 # 3. Push feature branch
 git push -u origin feature/phase3-respiratory
 
-# 4. Trigger manual operational acceptance test workflow
-gh workflow run operational-e2e.yml --ref master
+# 4. Trigger manual operational acceptance test workflow against feature branch
+gh workflow run operational-e2e.yml --ref feature/phase3-respiratory
 
 # 5. Inspect workflow run status and retain execution URL
 gh run list --workflow operational-e2e.yml --limit 5
@@ -164,9 +168,10 @@ gh run list --workflow operational-e2e.yml --limit 5
 
 ## 8. Automated Test Suite Summary
 
-- **Total Backend Tests**: **80 passing, 0 failing, 0 skipped, 0 warnings**.
+- **Total Backend Tests**: **80 passing, 0 failing, 0 skipped**.
+- **Upstream Deprecation Warnings**: **None displayed under documented filters** (targeted filter for `asyncio.iscoroutinefunction` in `pyproject.toml`).
 - **RLS PostgreSQL Isolation Tests**: 8 passing against live PostgreSQL 18.0 / PostGIS 3.6.4.
 - **Reconciliation Regression Tests**: `test_replay_episode_reconciliation.py` (3 passing).
 - **Data Quality Edge Case Tests**: `test_phase4_data_quality_scenarios.py` (6 passing).
 - **Exact Timeliness Delay Arithmetic Tests**: `test_replay_timeliness.py` (3 passing).
-- **Deployed End-to-End Workflow Tests**: `test_deployed_heat_workflow.py` and `test_deployed_respiratory_workflow.py` (both passing).
+- **Backend Workflow Integration Tests**: `test_deployed_heat_workflow.py` and `test_deployed_respiratory_workflow.py` (both passing).
