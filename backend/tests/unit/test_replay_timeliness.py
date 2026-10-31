@@ -160,3 +160,4 @@ def test_provenance_and_version_export():
     assert meta["commit"] == EVALUATION_GIT_COMMIT
     assert meta["configuration"]["temp_threshold_c"] == 39.0
     assert meta["configuration"]["eligible_pre_onset_lead_days"] == 2
+

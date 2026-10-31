@@ -99,7 +99,8 @@ def simulate_scenario(
 
         evidences: List[EvidenceItem] = []
 
-        # 1. Weather
+        # 1. Environmental Signals
+        # 1A. Apparent Temperature (Heat Hazard)
         weather_df = available_df[available_df["metric_code"] == "apparent_temperature"]
         if not weather_df.empty:
             current_temp = float(weather_df.iloc[-1]["value"])
@@ -125,10 +126,68 @@ def simulate_scenario(
                     data_label="synthetic",
                     geography_id="DIST-DHANPUR",
                     timestamp=sim_time,
+                    unit="celsius",
                 )
             )
 
+        # 1B. PM2.5 Concentration (Air Quality Hazard)
+        pm25_df = available_df[available_df["metric_code"] == "pm25_concentration"]
+        if not pm25_df.empty:
+            current_pm25 = float(pm25_df.iloc[-1]["value"])
+            pm25_baseline = recent_baseline.fit_predict(pm25_df, sim_time)
+            pm25_score = detector_w.compute_anomaly(
+                observed=current_pm25,
+                expected=pm25_baseline.expected_value,
+                standard_error=pm25_baseline.standard_error,
+            )
+            evidences.append(
+                EvidenceItem(
+                    signal_family="environmental",
+                    metric_code="pm25_concentration",
+                    observed=current_pm25,
+                    expected=pm25_baseline.expected_value,
+                    excess=pm25_score.excess,
+                    standardised_residual=pm25_score.standardised_residual,
+                    ewma_value=pm25_score.ewma_value,
+                    is_anomaly=pm25_score.is_anomaly,
+                    source_freshness_minutes=15,
+                    is_fresh=True,
+                    is_stale=False,
+                    data_label="synthetic",
+                    geography_id="DIST-DHANPUR",
+                    timestamp=sim_time,
+                    unit="ug/m3",
+                )
+            )
+
+        # 1C. AQI (European AQI & US AQI - same environmental family, no double counting)
+        for aqi_code, aqi_sys in [("aqi_eu", "aqi_eu"), ("aqi_us", "aqi_us")]:
+            aqi_df = available_df[available_df["metric_code"] == aqi_code]
+            if not aqi_df.empty:
+                current_aqi = float(aqi_df.iloc[-1]["value"])
+                evidences.append(
+                    EvidenceItem(
+                        signal_family="environmental",
+                        metric_code=aqi_code,
+                        observed=current_aqi,
+                        expected=50.0,
+                        excess=current_aqi - 50.0,
+                        standardised_residual=(current_aqi - 50.0) / 10.0,
+                        ewma_value=current_aqi,
+                        is_anomaly=current_aqi > 100.0,
+                        source_freshness_minutes=15,
+                        is_fresh=True,
+                        is_stale=False,
+                        data_label="synthetic",
+                        geography_id="DIST-DHANPUR",
+                        timestamp=sim_time,
+                        unit="index_points",
+                        aqi_system=aqi_sys,
+                    )
+                )
+
         # 2. Health contacts
+        # 2A. Heat Exhaustion Contacts
         health_df = available_df[available_df["metric_code"] == "heat_exhaustion_contacts"]
         if not health_df.empty:
             current_health = float(health_df.iloc[-1]["value"])
@@ -157,7 +216,38 @@ def simulate_scenario(
                 )
             )
 
+        # 2B. Acute Respiratory Contacts (Air Quality)
+        resp_health_df = available_df[available_df["metric_code"] == "acute_respiratory_contacts"]
+        if not resp_health_df.empty:
+            current_resp = float(resp_health_df.iloc[-1]["value"])
+            resp_pred = poisson_baseline.fit_predict(resp_health_df, sim_time, current_exposure=50000)
+            resp_score = detector_h.compute_anomaly(
+                observed=current_resp,
+                expected=resp_pred.expected_value,
+                standard_error=resp_pred.standard_error,
+            )
+            evidences.append(
+                EvidenceItem(
+                    signal_family="clinical_service",
+                    metric_code="acute_respiratory_contacts",
+                    observed=current_resp,
+                    expected=resp_pred.expected_value,
+                    excess=resp_score.excess,
+                    standardised_residual=resp_score.standardised_residual,
+                    ewma_value=resp_score.ewma_value,
+                    is_anomaly=resp_score.is_anomaly,
+                    source_freshness_minutes=60,
+                    is_fresh=True,
+                    is_stale=False,
+                    data_label="synthetic",
+                    geography_id="DIST-DHANPUR",
+                    timestamp=sim_time,
+                    denominator=50000.0,
+                )
+            )
+
         # 3. Workforce absence
+        # 3A. Sickness Absence Worker Days
         work_df = available_df[available_df["metric_code"] == "sickness_absence_worker_days"]
         if not work_df.empty:
             current_work = float(work_df.iloc[-1]["value"])
@@ -183,6 +273,37 @@ def simulate_scenario(
                     data_label="synthetic",
                     geography_id="DIST-DHANPUR",
                     timestamp=sim_time,
+                    is_nonspecific=True,
+                )
+            )
+
+        # 3B. Coded Respiratory Sickness Absence
+        resp_work_df = available_df[available_df["metric_code"] == "respiratory_sickness_absence_days"]
+        if not resp_work_df.empty:
+            current_resp_w = float(resp_work_df.iloc[-1]["value"])
+            resp_w_pred = poisson_baseline.fit_predict(resp_work_df, sim_time, current_exposure=3200)
+            resp_w_score = detector_a.compute_anomaly(
+                observed=current_resp_w,
+                expected=resp_w_pred.expected_value,
+                standard_error=resp_w_pred.standard_error,
+            )
+            evidences.append(
+                EvidenceItem(
+                    signal_family="workforce",
+                    metric_code="respiratory_sickness_absence_days",
+                    observed=current_resp_w,
+                    expected=resp_w_pred.expected_value,
+                    excess=resp_w_score.excess,
+                    standardised_residual=resp_w_score.standardised_residual,
+                    ewma_value=resp_w_score.ewma_value,
+                    is_anomaly=resp_w_score.is_anomaly,
+                    source_freshness_minutes=120,
+                    is_fresh=True,
+                    is_stale=False,
+                    data_label="synthetic",
+                    geography_id="DIST-DHANPUR",
+                    timestamp=sim_time,
+                    is_nonspecific=False,
                 )
             )
 
@@ -190,10 +311,16 @@ def simulate_scenario(
         scoring_compute_ms = (t1 - t0) * 1000.0
         step_latencies.append(scoring_compute_ms)
 
+        is_air_hazard = any(e.metric_code == "pm25_concentration" for e in evidences)
+        sim_hazard = "air_quality_respiratory" if is_air_hazard else "heat_illness"
+        env_thresholds = {"pm25_concentration": 60.0, "apparent_temperature": temp_threshold_c, "aqi_us": 150.0}
+
         # Policy evaluation
         if policy_name == "environmental_only":
-            env_item = next((e for e in evidences if e.metric_code == "apparent_temperature"), None)
-            if env_item and env_item.observed >= temp_threshold_c:
+            env_item = next((e for e in evidences if e.metric_code in ["pm25_concentration", "apparent_temperature"]), None)
+            thresh = env_thresholds.get(env_item.metric_code) if env_item else None
+            if env_item and thresh is not None and env_item.observed >= thresh:
+                unit_str = f" {env_item.unit}" if env_item.unit else ""
                 raw_alerts.append({
                     "day": d,
                     "observation_date": sim_time.strftime("%Y-%m-%d"),
@@ -207,11 +334,9 @@ def simulate_scenario(
                     "evidence_class": "environmental_watch",
                     "severity": "watch",
                     "score": 50.0,
-                    "reasons": [f"Apparent temperature {env_item.observed:.2f}°C >= threshold {temp_threshold_c:.1f}°C"],
-                    "temp_value": env_item.observed,
-                    "temp_threshold": temp_threshold_c,
+                    "reasons": [f"{env_item.metric_code} {env_item.observed:.2f}{unit_str} >= threshold {thresh:.1f}"],
                     "geography_id": "DIST-DHANPUR",
-                    "hazard": "heat_illness",
+                    "hazard": sim_hazard,
                 })
         elif policy_name == "health_only":
             health_elevated = [
@@ -235,13 +360,13 @@ def simulate_scenario(
                     "score": 60.0,
                     "reasons": [f"{e.metric_code} elevated residual {e.standardised_residual:.2f} > 2.0" for e in health_elevated],
                     "geography_id": "DIST-DHANPUR",
-                    "hazard": "heat_illness",
+                    "hazard": sim_hazard,
                 })
         else:  # fused_corroborated
             decision = fusion_engine.evaluate(
-                hazard="heat_illness",
+                hazard=sim_hazard,
                 evidences=evidences,
-                environmental_thresholds={"apparent_temperature": temp_threshold_c},
+                environmental_thresholds=env_thresholds,
             )
             if decision.should_alert:
                 raw_alerts.append({
@@ -377,7 +502,7 @@ def simulate_scenario(
             detailed_episodes.append({
                 "episode_id": f"EP-{scenario_name[:4].upper()}-{ep_seq:03d}",
                 "tenant_id": tenant_id,
-                "hazard": "heat_illness",
+                "hazard": sim_hazard,
                 "category": cat,
                 "days_active": ep_days,
                 "first_issued_at": alerts[0]["alert_issued_at"],
@@ -607,11 +732,13 @@ def run_comprehensive_replay_suite(output_path: str = "fixtures/replay_evaluatio
     grad_df, grad_ref = ScenarioGenerator.generate_heat_gradual_scenario(start_date=start_date, days=45, seed=grad_seed)
     abrupt_df, abrupt_ref = ScenarioGenerator.generate_heat_abrupt_extreme_scenario(start_date=start_date, days=45, seed=abrupt_seed)
     spurious_df, spurious_ref = ScenarioGenerator.generate_spurious_health_spike_scenario(start_date=start_date, days=45, seed=spurious_seed)
+    air_df, air_ref = ScenarioGenerator.generate_air_quality_respiratory_surge_scenario(start_date=start_date, days=45, seed=501)
 
     scenarios = {
         "heat-gradual": (grad_df, grad_ref, grad_seed),
         "heat-abrupt-extreme": (abrupt_df, abrupt_ref, abrupt_seed),
         "spurious-health-spike": (spurious_df, spurious_ref, spurious_seed),
+        "air-quality-respiratory-surge": (air_df, air_ref, 501),
     }
 
     policies = ["environmental_only", "health_only", "fused_corroborated"]
@@ -628,6 +755,7 @@ def run_comprehensive_replay_suite(output_path: str = "fixtures/replay_evaluatio
             "Direct latency between source availability and alert issuance is calculated exactly (e.g. 10m 2s), without conflating daily batch cadence.",
             "Environmental-only policy produces an environmental exposure watch without health corroboration.",
             "In a null scenario with no reference event, unmatched alerts are reported as false alarms without claiming a true event was rejected.",
+            "All fixtures and performance results are synthetic. Do not claim demonstrated health-outcome improvements.",
         ],
         "scenario_evaluations": {},
         "policy_comparisons": {},
