@@ -419,6 +419,73 @@ class ScenarioGenerator:
         return df, None
 
     @staticmethod
+    def generate_air_quality_missing_stale_scenario(
+        start_date: datetime,
+        days: int = 45,
+        seed: int = 901,
+    ) -> Tuple[pd.DataFrame, Optional[Dict[str, Any]]]:
+        """
+        Scenario with data quality anomalies:
+        - Stale environmental sensor readings (> 180m old).
+        - Suppressed small-cell health counts (values 1-4).
+        - Quarantined faulty equipment readings.
+        - Missing population denominator.
+        Verifies that missing/stale/suppressed signals are treated as explicit states, not numerical zero.
+        """
+        np.random.seed(seed)
+        records = []
+
+        for d in range(days):
+            current_day = start_date + timedelta(days=d)
+            is_stale_day = (20 <= d <= 25)
+            is_suppressed_day = (26 <= d <= 28)
+            is_quarantined_day = (29 <= d <= 31)
+
+            # PM2.5
+            pm_status = "stale" if is_stale_day else ("quarantined" if is_quarantined_day else "valid")
+            pm25 = 115.0 if is_stale_day else 30.0
+
+            records.append({
+                "timestamp": current_day,
+                "metric_code": "pm25_concentration",
+                "signal_family": "environmental",
+                "value": pm25,
+                "unit": "ug/m3",
+                "geography_id": "DIST-DHANPUR",
+                "status": pm_status,
+                "is_stale": is_stale_day,
+                "is_quarantined": is_quarantined_day,
+                "source_freshness_minutes": 360 if is_stale_day else 15,
+            })
+
+            # Health contacts
+            if is_suppressed_day:
+                resp_status = "suppressed"
+                resp_count = 3  # Small cell in [1, 4]
+                is_suppressed = True
+            else:
+                resp_status = "valid"
+                resp_count = 10
+                is_suppressed = False
+
+            records.append({
+                "timestamp": current_day,
+                "metric_code": "acute_respiratory_contacts",
+                "signal_family": "clinical_service",
+                "value": resp_count,
+                "unit": "encounters",
+                "contributor_count": 5 if is_suppressed_day else 25,
+                "exposure": None if is_suppressed_day else 50000,  # Missing denominator on suppressed day
+                "geography_id": "DIST-DHANPUR",
+                "status": resp_status,
+                "is_suppressed": is_suppressed,
+            })
+
+        df = pd.DataFrame(records)
+        return df, None
+
+
+    @staticmethod
     def generate_respiratory_outbreak_without_pollution_scenario(
         start_date: datetime,
         days: int = 45,
@@ -474,6 +541,73 @@ class ScenarioGenerator:
         return df, None
 
     @staticmethod
+    def generate_air_quality_missing_stale_scenario(
+        start_date: datetime,
+        days: int = 45,
+        seed: int = 901,
+    ) -> Tuple[pd.DataFrame, Optional[Dict[str, Any]]]:
+        """
+        Scenario with data quality anomalies:
+        - Stale environmental sensor readings (> 180m old).
+        - Suppressed small-cell health counts (values 1-4).
+        - Quarantined faulty equipment readings.
+        - Missing population denominator.
+        Verifies that missing/stale/suppressed signals are treated as explicit states, not numerical zero.
+        """
+        np.random.seed(seed)
+        records = []
+
+        for d in range(days):
+            current_day = start_date + timedelta(days=d)
+            is_stale_day = (20 <= d <= 25)
+            is_suppressed_day = (26 <= d <= 28)
+            is_quarantined_day = (29 <= d <= 31)
+
+            # PM2.5
+            pm_status = "stale" if is_stale_day else ("quarantined" if is_quarantined_day else "valid")
+            pm25 = 115.0 if is_stale_day else 30.0
+
+            records.append({
+                "timestamp": current_day,
+                "metric_code": "pm25_concentration",
+                "signal_family": "environmental",
+                "value": pm25,
+                "unit": "ug/m3",
+                "geography_id": "DIST-DHANPUR",
+                "status": pm_status,
+                "is_stale": is_stale_day,
+                "is_quarantined": is_quarantined_day,
+                "source_freshness_minutes": 360 if is_stale_day else 15,
+            })
+
+            # Health contacts
+            if is_suppressed_day:
+                resp_status = "suppressed"
+                resp_count = 3  # Small cell in [1, 4]
+                is_suppressed = True
+            else:
+                resp_status = "valid"
+                resp_count = 10
+                is_suppressed = False
+
+            records.append({
+                "timestamp": current_day,
+                "metric_code": "acute_respiratory_contacts",
+                "signal_family": "clinical_service",
+                "value": resp_count,
+                "unit": "encounters",
+                "contributor_count": 5 if is_suppressed_day else 25,
+                "exposure": None if is_suppressed_day else 50000,  # Missing denominator on suppressed day
+                "geography_id": "DIST-DHANPUR",
+                "status": resp_status,
+                "is_suppressed": is_suppressed,
+            })
+
+        df = pd.DataFrame(records)
+        return df, None
+
+
+    @staticmethod
     def generate_air_quality_null_scenario(
         start_date: datetime,
         days: int = 45,
@@ -510,6 +644,73 @@ class ScenarioGenerator:
 
         df = pd.DataFrame(records)
         return df, None
+
+    @staticmethod
+    def generate_air_quality_missing_stale_scenario(
+        start_date: datetime,
+        days: int = 45,
+        seed: int = 901,
+    ) -> Tuple[pd.DataFrame, Optional[Dict[str, Any]]]:
+        """
+        Scenario with data quality anomalies:
+        - Stale environmental sensor readings (> 180m old).
+        - Suppressed small-cell health counts (values 1-4).
+        - Quarantined faulty equipment readings.
+        - Missing population denominator.
+        Verifies that missing/stale/suppressed signals are treated as explicit states, not numerical zero.
+        """
+        np.random.seed(seed)
+        records = []
+
+        for d in range(days):
+            current_day = start_date + timedelta(days=d)
+            is_stale_day = (20 <= d <= 25)
+            is_suppressed_day = (26 <= d <= 28)
+            is_quarantined_day = (29 <= d <= 31)
+
+            # PM2.5
+            pm_status = "stale" if is_stale_day else ("quarantined" if is_quarantined_day else "valid")
+            pm25 = 115.0 if is_stale_day else 30.0
+
+            records.append({
+                "timestamp": current_day,
+                "metric_code": "pm25_concentration",
+                "signal_family": "environmental",
+                "value": pm25,
+                "unit": "ug/m3",
+                "geography_id": "DIST-DHANPUR",
+                "status": pm_status,
+                "is_stale": is_stale_day,
+                "is_quarantined": is_quarantined_day,
+                "source_freshness_minutes": 360 if is_stale_day else 15,
+            })
+
+            # Health contacts
+            if is_suppressed_day:
+                resp_status = "suppressed"
+                resp_count = 3  # Small cell in [1, 4]
+                is_suppressed = True
+            else:
+                resp_status = "valid"
+                resp_count = 10
+                is_suppressed = False
+
+            records.append({
+                "timestamp": current_day,
+                "metric_code": "acute_respiratory_contacts",
+                "signal_family": "clinical_service",
+                "value": resp_count,
+                "unit": "encounters",
+                "contributor_count": 5 if is_suppressed_day else 25,
+                "exposure": None if is_suppressed_day else 50000,  # Missing denominator on suppressed day
+                "geography_id": "DIST-DHANPUR",
+                "status": resp_status,
+                "is_suppressed": is_suppressed,
+            })
+
+        df = pd.DataFrame(records)
+        return df, None
+
 
 
 

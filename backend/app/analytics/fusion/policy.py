@@ -196,7 +196,7 @@ class EvidenceFusionEngine:
             max_z = max(health_residuals) if health_residuals else 2.0
             score = min(92.0, 52.0 + max_z * 10.0)
             severity = "warning" if score < 75.0 else "critical"
-            reasons.append("Environmental exposure threshold exceeded AND corroborated with elevated health contacts in the same district.")
+            reasons.append("Corroborated warning: Concurrent pollution exposure and respiratory-health anomaly; cause not established. Combined evidence indicates elevated operational risk.")
             reasons.extend(env_details)
             reasons.extend(health_details)
             should_alert = True

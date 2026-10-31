@@ -28,7 +28,7 @@ class AirQualityPlaybook:
             "recommended_actions": [
                 "Verify local ambient air monitoring station readings and inspect HVAC particulate filters.",
                 "Issue precautionary air-quality guidance to facilities and pre-notify vulnerable individuals (asthma, COPD).",
-                "Ensure inventory of particulate protective masks (N95/FFP2) is inspected and available upon request.",
+                "Safety lead to review the approved exposure-control and respiratory-protection procedure.",
             ],
             "accountable_roles": ["workplace_safety_manager", "public_health_analyst"],
             "review_window_hours": 12,
@@ -39,7 +39,7 @@ class AirQualityPlaybook:
             "recommended_actions": [
                 "Activate facility clean-air shelters and verify continuous high-efficiency air filtration.",
                 "Reschedule heavy outdoor physical activities away from morning/evening stagnation inversion hours.",
-                "Provide voluntary particulate protective equipment (N95/FFP2) with manufacturer usage guidance.",
+                "Safety lead to review the approved exposure-control and respiratory-protection procedure.",
                 "Conduct operational review of district clinical service capacity for acute respiratory cases.",
             ],
             "accountable_roles": ["workplace_safety_manager", "occupational_health_analyst"],
@@ -58,16 +58,17 @@ class AirQualityPlaybook:
         },
     }
 
-    BOUNDARIES = {
+    PROTOTYPE_PROHIBITED_USE_CONTROLS = {
         "prohibit_automatic_medical_treatment": True,
         "prohibit_mandatory_individual_restrictions_without_clinician": True,
         "prohibit_respirator_mandate_without_fit_test": True,
         "prohibit_disciplinary_actions": True,
         "statutory_authority_note": (
-            "SentinelHealth is a decision-support early warning system. All mitigation actions must be approved "
-            "and executed by authorized operational roles in compliance with applicable occupational safety and health regulations."
+            "SentinelHealth is a decision-support prototype. Passing policy tests does not constitute verified legal compliance. "
+            "All mitigation actions must be reviewed and authorized by designated human operational leads in accordance with applicable safety regulations."
         ),
     }
+    BOUNDARIES = PROTOTYPE_PROHIBITED_USE_CONTROLS
 
     @classmethod
     def generate_recommendation(
@@ -106,3 +107,4 @@ class AirQualityPlaybook:
                 "and logged operational adjustments."
             ),
         }
+

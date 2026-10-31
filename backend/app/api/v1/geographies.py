@@ -147,7 +147,7 @@ async def get_privacy_safe_map_layer(
                 )
                 status = "elevated" if is_elevated else "valid_non_elevated"
 
-                # Compatible incidence rate: requires unsuppressed count and valid population denominator
+                # Compatible encounter rate: requires unsuppressed count and valid population denominator
                 if display_val is not None and g.population_estimate and g.population_estimate > 0:
                     rate_per_100k = round((display_val / g.population_estimate) * 100_000, 2)
                 else:
@@ -166,7 +166,8 @@ async def get_privacy_safe_map_layer(
                 "unit": sig.unit if sig else None,
                 "is_suppressed": is_suppressed,
                 "suppression_reason": suppression_reason,
-                "incidence_rate_per_100k": rate_per_100k,
+                "encounter_rate_per_100k": rate_per_100k,
+                "rate_label": "Respiratory encounters per 100,000 catchment population during the selected period (not disease incidence)",
                 "location_confidence": sig.location_confidence.value if sig else "unknown",
                 "location_basis": sig.location_basis.value if sig else "unspecified",
             },

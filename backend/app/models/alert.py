@@ -40,6 +40,12 @@ class Hazard(str, enum.Enum):
     WORKPLACE_SAFETY = "workplace_safety"
     DATA_QUALITY = "data_quality"
 
+    @classmethod
+    def _missing_(cls, value: object) -> Hazard | None:
+        if str(value).lower() in ("air_quality_respiratory", "air_quality", "respiratory"):
+            return cls.RESPIRATORY_AIR_QUALITY
+        return None
+
 
 class EvidenceClass(str, enum.Enum):
     ENVIRONMENTAL_WATCH = "environmental_watch"

@@ -469,3 +469,4 @@ def test_all_cause_workforce_absence_labeled_nonspecific(fusion_engine):
     # Because there is no specific clinical/workforce respiratory anomaly, this remains an environmental watch!
     assert decision.evidence_class == "environmental_watch"
     assert any("cannot infer specific diagnosis" in r for r in decision.reasons)
+
