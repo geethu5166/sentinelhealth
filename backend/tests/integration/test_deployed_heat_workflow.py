@@ -277,6 +277,35 @@ async def test_complete_deployed_heat_workflow_end_to_end(
     assert task.status == TaskStatus.PENDING
 
     # ──────────────────────────────────────────────────────────────────────────
+    # Step 5b: Verify Server-Side Evidence Sanitisation in REST API Responses
+    # ──────────────────────────────────────────────────────────────────────────
+    alert_detail_resp = await client.get(
+        f"/api/v1/alerts/{alert.id}",
+        headers=auth_headers_tenant_b,
+    )
+    assert alert_detail_resp.status_code == 200
+    alert_detail = alert_detail_resp.json()
+    wf_ev = next(e for e in alert_detail["evidences"] if e["signal_family"] == "workforce")
+    assert wf_ev["is_suppressed"] is True
+    assert wf_ev["observed_value"] is None
+    assert wf_ev["expected_value"] is None
+    assert wf_ev["excess"] is None
+    assert wf_ev["rate_difference"] is None
+
+    # Verify /evidence sub-resource directly
+    evidence_resp = await client.get(
+        f"/api/v1/alerts/{alert.id}/evidence",
+        headers=auth_headers_tenant_b,
+    )
+    assert evidence_resp.status_code == 200
+    evidence_items = evidence_resp.json()
+    wf_item = next(e for e in evidence_items if e["signal_family"] == "workforce")
+    assert wf_item["is_suppressed"] is True
+    assert wf_item["observed_value"] is None
+    assert wf_item["expected_value"] is None
+    assert wf_item["excess"] is None
+
+    # ──────────────────────────────────────────────────────────────────────────
     # Step 6: Task Acknowledgment via Authenticated API (Tenant B)
     # ──────────────────────────────────────────────────────────────────────────
     ack_payload = {

@@ -156,7 +156,7 @@ async def get_alert(
             to_status=ev.to_status,
             actor_id=ev.actor_id,
             reason=ev.reason,
-            event_metadata=ev.event_metadata,
+            event_metadata=getattr(ev, "metadata_", getattr(ev, "event_metadata", None)),
             created_at=ev.created_at,
         )
         for ev in alert.state_events

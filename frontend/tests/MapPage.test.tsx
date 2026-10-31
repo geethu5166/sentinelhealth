@@ -30,3 +30,4 @@ describe("MapPage", () => {
     expect(htmlContent).not.toMatch(/contributor count\s*[:=]\s*[1-9]/i);
   });
 });
+
