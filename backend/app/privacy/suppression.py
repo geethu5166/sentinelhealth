@@ -36,16 +36,16 @@ class DisclosureChecker:
         2. If sensitive count is within [1, 4] -> suppress.
         3. Zero is preserved if non-sensitive, but unknown/suppressed is NOT zero.
         """
-        # Contributor count check
+        # Contributor count check: do not expose the exact number of contributors
         if contributor_count is not None and contributor_count < self.min_contributors:
-            return True, f"Contributor count ({contributor_count}) below privacy threshold ({self.min_contributors})"
+            return True, "Suppressed: this group does not meet the minimum reporting threshold (Contributor count is below privacy threshold)."
 
-        # Small cell suppression for counts
+        # Small cell suppression for counts: do not expose the exact count
         if is_sensitive_health_event and value is not None:
             val_float = float(value)
             # If value is integer-like and in range [1, 4]
             if self.suppress_range[0] <= val_float <= self.suppress_range[1]:
-                return True, f"Count ({val_float}) falls within protected small-cell range [{self.suppress_range[0]}-{self.suppress_range[1]}]"
+                return True, "Suppressed: this group does not meet the minimum reporting threshold (encounter count falls within protected small-cell range)."
 
         return False, None
 

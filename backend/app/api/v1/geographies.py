@@ -74,8 +74,10 @@ async def list_workplaces(
 
 
 @router.get("/map-layer")
+@router.get("/geographies/map-layer")
 async def get_privacy_safe_map_layer(
     metric_code: str,
+    period: str = "24h",
     current_user: UserInfo = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -131,9 +133,15 @@ async def get_privacy_safe_map_layer(
             if suppress:
                 status = "suppressed"
                 is_suppressed = True
-                suppression_reason = reason or "Protected by disclosure control"
+                suppression_reason = reason or "Suppressed: this group does not meet the minimum reporting threshold."
                 display_val = None
                 rate_per_100k = None  # Never compute rate on suppressed numerator
+            elif sig.value is None or (sig.properties and sig.properties.get("insufficient_data")):
+                status = "insufficient_data"
+                is_suppressed = False
+                suppression_reason = None
+                display_val = None
+                rate_per_100k = None
             else:
                 is_suppressed = False
                 suppression_reason = None

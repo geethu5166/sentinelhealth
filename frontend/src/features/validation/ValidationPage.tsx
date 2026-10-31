@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { AlertCircle, AlertTriangle, CheckCircle, Clock, Database, Layers, Play, ShieldAlert } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle, Clock, Database, Layers, Play, RefreshCw, ShieldAlert } from "lucide-react";
 import { useReplaySummary } from "../../lib/api/hooks";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
@@ -34,14 +34,14 @@ export const ValidationPage: React.FC = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Replay Validation & Benchmark Performance</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Replay Validation &amp; Benchmark Performance</h2>
           <p className="text-muted-foreground text-sm">
-            Auditable CDC-aligned chronological evaluation across 15 synthetic benchmark scenarios (Scenario Generator v0.3.0).
+            Stored synthetic benchmark evaluation results served by the API across 15 CDC-aligned test scenarios. Kept strictly separate from tenant operational records.
           </p>
         </div>
 
         <Button onClick={() => refetch()} size="sm" variant="outline">
-          <Play className="h-4 w-4 mr-1.5" /> Refresh Replay Results
+          <RefreshCw className="h-4 w-4 mr-1.5" /> Refresh Stored Benchmark Data
         </Button>
       </div>
 

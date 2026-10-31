@@ -42,17 +42,30 @@ async def list_replay_runs(
 async def get_replay_summary(
     current_user: UserInfo = Depends(get_current_user),
 ):
-    """Retrieves the full Phase 4 CDC-aligned replay evaluation summary across 15 benchmark scenarios."""
+    """Retrieves stored synthetic CDC-aligned benchmark replay evaluation results across 15 scenarios."""
     import json
     from pathlib import Path
 
-    summary_file = Path(__file__).resolve().parent.parent.parent.parent / "fixtures" / "replay_evaluation_summary.json"
-    if not summary_file.exists():
-        # Fallback to backend/fixtures
-        summary_file = Path("fixtures/replay_evaluation_summary.json")
+    candidates = [
+        Path(__file__).resolve().parent.parent.parent.parent / "fixtures" / "replay_evaluation_summary.json",
+        Path(__file__).resolve().parent.parent.parent / "fixtures" / "replay_evaluation_summary.json",
+        Path(__file__).resolve().parent.parent / "fixtures" / "replay_evaluation_summary.json",
+        Path("fixtures/replay_evaluation_summary.json"),
+        Path("backend/fixtures/replay_evaluation_summary.json"),
+        Path("/app/fixtures/replay_evaluation_summary.json"),
+        Path("/app/backend/fixtures/replay_evaluation_summary.json"),
+    ]
+    summary_file = None
+    for cand in candidates:
+        if cand.exists():
+            summary_file = cand
+            break
 
-    if not summary_file.exists():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Replay evaluation summary not generated")
+    if not summary_file or not summary_file.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Stored synthetic benchmark evaluation summary not available in current deployment",
+        )
 
     with open(summary_file, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -62,6 +75,16 @@ async def get_replay_summary(
     if ms_file.exists():
         with open(ms_file, "r", encoding="utf-8") as f:
             data["multiseed_summary"] = json.load(f)
+
+    # Clearly document that these are stored synthetic benchmark records, not live operational records
+    data["provenance"] = "stored_synthetic_benchmark_evaluation"
+    data["is_live_surveillance"] = False
+    data["is_tenant_operational_record"] = False
+    data["evaluation_narrative_note"] = (
+        "Stored synthetic benchmark evaluation results served by the API. "
+        "These metrics reflect simulated test-scenario replay performance and are maintained "
+        "strictly separate from tenant operational records."
+    )
 
     return data
 

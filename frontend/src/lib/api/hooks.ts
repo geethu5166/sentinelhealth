@@ -5,6 +5,7 @@ import {
   AlertEvidence,
   AlertSummary,
   GeographyInfo,
+  MapLayerCollection,
   OverviewData,
   SignalRecord,
   TaskSummary,
@@ -111,6 +112,16 @@ export function useReplaySummary() {
   return useQuery<any>({
     queryKey: ["replay-summary"],
     queryFn: () => apiFetch<any>("/validation/summary"),
+  });
+}
+
+export function useMapLayer(metricCode: string, period: string = "24h") {
+  return useQuery<MapLayerCollection>({
+    queryKey: ["map-layer", metricCode, period],
+    queryFn: () =>
+      apiFetch<MapLayerCollection>(
+        `/map-layer?metric_code=${encodeURIComponent(metricCode)}&period=${encodeURIComponent(period)}`
+      ),
   });
 }
 

@@ -173,3 +173,30 @@ export interface GeographyInfo {
   is_active: boolean;
 }
 
+export interface MapLayerFeature {
+  type: "Feature";
+  geometry?: any;
+  properties: {
+    geography_id: string;
+    geography_code: string;
+    geography_name: string;
+    status: "elevated" | "valid_non_elevated" | "suppressed" | "insufficient_data" | "unavailable";
+    metric_code: string;
+    period?: string;
+    value?: number | null;
+    unit?: string | null;
+    is_suppressed: boolean;
+    suppression_reason?: string | null;
+    encounter_rate_per_100k?: number | null;
+    rate_label?: string;
+    location_confidence?: string;
+    location_basis?: string;
+  };
+}
+
+export interface MapLayerCollection {
+  type: "FeatureCollection";
+  metric_code: string;
+  features: MapLayerFeature[];
+}
+

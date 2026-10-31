@@ -132,7 +132,7 @@ export const TasksPage: React.FC = () => {
                             : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 border-amber-300"
                         }`}
                       >
-                        {t.status.replace(/_/g, " ")}
+                        {t.status === "completed" ? "Completion recorded" : t.status.replace(/_/g, " ")}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -144,7 +144,7 @@ export const TasksPage: React.FC = () => {
                         <div className="mt-1.5 text-[11px] font-mono text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 p-1.5 rounded border border-emerald-200 dark:border-emerald-800 flex items-start gap-1.5">
                           <ShieldCheck className="h-3.5 w-3.5 mt-0.5 shrink-0 text-emerald-600" />
                           <span>
-                            <strong>Recorded Evidence:</strong> {t.completion_evidence}
+                            <strong>Completion recorded:</strong> {t.completion_evidence}
                           </span>
                         </div>
                       )}

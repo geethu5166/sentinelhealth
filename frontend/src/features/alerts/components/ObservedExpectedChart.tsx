@@ -22,7 +22,7 @@ export const ObservedExpectedChart: React.FC<ChartProps> = ({ evidence, title })
       <div className="h-64 flex flex-col items-center justify-center border border-dashed rounded-lg bg-muted/20 p-6 text-center">
         <span className="text-sm font-semibold text-muted-foreground">Chart Suppressed for Privacy</span>
         <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-          Observed counts or contributor cohorts fall below the privacy threshold. Exact time-series rendering is masked.
+          Suppressed: this group does not meet the minimum reporting threshold. Exact time-series rendering is masked under disclosure controls.
         </p>
       </div>
     );

@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatSuppressed(value: number | null | undefined, isSuppressed: boolean): string {
-  if (isSuppressed) return "Suppressed for privacy";
+  if (isSuppressed) return "Suppressed: this group does not meet the minimum reporting threshold";
   if (value === null || value === undefined) return "—";
   return value.toLocaleString();
 }

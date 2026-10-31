@@ -51,3 +51,52 @@ async def test_invalid_hazard_query_parameter_rejected_422(client: AsyncClient, 
     assert "Invalid hazard" in data["detail"]
 
 
+@pytest.mark.asyncio
+async def test_get_privacy_safe_map_layer_authenticated(client: AsyncClient, auth_headers: dict):
+    """API returns privacy-safe GeoJSON FeatureCollection; never leaks exact counts or rates for suppressed cells."""
+    response = await client.get("/api/v1/map-layer?metric_code=pm25_concentration", headers=auth_headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["type"] == "FeatureCollection"
+    assert "features" in data
+
+    for feat in data["features"]:
+        props = feat["properties"]
+        assert "geography_code" in props
+        assert "status" in props
+        assert props["status"] in ["elevated", "valid_non_elevated", "suppressed", "insufficient_data", "unavailable"]
+
+        # Critical disclosure checks
+        assert "contributor_count" not in props, "Exact contributor count must not be exposed in map properties"
+        if props.get("is_suppressed"):
+            assert props["value"] is None, "Raw metric value must be None when cell is suppressed"
+            assert props["encounter_rate_per_100k"] is None, "Rate must not be calculated on suppressed numerator"
+            assert "Suppressed: this group does not meet the minimum reporting threshold" in props["suppression_reason"]
+
+
+@pytest.mark.asyncio
+async def test_map_layer_missing_metric_produces_unavailable(client: AsyncClient, auth_headers: dict):
+    """Missing or failed signals must produce 'unavailable', never a fabricated health value or suppressed result."""
+    response = await client.get("/api/v1/map-layer?metric_code=non_existent_metric_999", headers=auth_headers)
+    assert response.status_code == 200
+    data = response.json()
+    for feat in data["features"]:
+        props = feat["properties"]
+        assert props["status"] == "unavailable"
+        assert props["value"] is None
+        assert props["is_suppressed"] is False
+
+
+@pytest.mark.asyncio
+async def test_get_replay_summary_stored_benchmark_metadata(client: AsyncClient, auth_headers: dict):
+    """Replay summary endpoint returns stored synthetic benchmark results separate from tenant operational records."""
+    response = await client.get("/api/v1/validation/summary", headers=auth_headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["provenance"] == "stored_synthetic_benchmark_evaluation"
+    assert data["is_live_surveillance"] is False
+    assert data["is_tenant_operational_record"] is False
+    assert "policy_comparisons" in data
+
+
+
