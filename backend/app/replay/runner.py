@@ -26,7 +26,28 @@ from app.analytics.fusion.policy import EvidenceFusionEngine, EvidenceItem
 from app.replay.scenarios import ScenarioGenerator
 
 SCENARIO_GENERATOR_VERSION = "0.2.0"
-EVALUATION_GIT_COMMIT = "ac86ff5"
+EVALUATION_GIT_COMMIT = "b61579e"
+
+
+def calculate_exact_time_delay(onset: datetime, alert_issued_at: datetime) -> Dict[str, Any]:
+    """Calculates exact mathematical delay between event onset and alert issuance.
+
+    Strictly derives duration from datetime subtraction: (alert_issued_at - onset).
+    Prevents narrative approximations or manual copy-paste drift.
+    """
+    delta = alert_issued_at - onset
+    total_seconds = delta.total_seconds()
+    total_hours = round(total_seconds / 3600.0, 2)
+    total_days = round(total_seconds / 86400.0, 4)
+    sign = "+" if total_seconds >= 0 else "-"
+    abs_days = abs(total_days)
+    return {
+        "total_seconds": total_seconds,
+        "total_hours": total_hours,
+        "total_days": total_days,
+        "is_lead_time": total_seconds < 0,
+        "formatted_display": f"{total_hours:.1f}h ({sign}{abs_days:.2f}d)",
+    }
 
 
 def simulate_scenario(
@@ -587,27 +608,26 @@ def simulate_scenario(
             },
         }
 
+        delay_calc: Optional[Dict[str, Any]] = None
         if ref_onset:
+            delay_calc = calculate_exact_time_delay(ref_onset, t_issue)
+            issue_delay_days = delay_calc["total_days"]
             observation_delay_days = round((t_obs - ref_onset).total_seconds() / 86400.0, 2)
-            issue_delay_days = round((t_issue - ref_onset).total_seconds() / 86400.0, 4)
         if earliest_useful:
             observation_useful_lead_days = round((earliest_useful - t_obs).total_seconds() / 86400.0, 2)
             issue_useful_lead_days = round((earliest_useful - t_issue).total_seconds() / 86400.0, 4)
 
-    # Operational timeliness narrative describing observation vs issue latency
-    operational_narrative = (
-        "Onset-day observation with next-day warning issuance (+1.01 days operational issue delay)"
-        if (issue_delay_days is not None and 1.0 <= issue_delay_days <= 1.5 and observation_delay_days == 0.0)
-        else (
-            f"Post-onset detection (+{observation_delay_days:.1f}d observation delay, +{issue_delay_days:.2f}d operational issue delay)"
-            if (issue_delay_days is not None and issue_delay_days > 1.5)
-            else (
-                "Pre-onset early warning satisfied predeclared criteria"
-                if (issue_delay_days is not None and issue_delay_days < 0)
-                else "No reference event or event missed"
-            )
-        )
-    )
+    # Operational timeliness narrative dynamically generated from exact calculated delays
+    if issue_delay_days is None:
+        operational_narrative = "No reference event or event missed"
+    elif issue_delay_days < 0:
+        operational_narrative = f"Pre-onset early warning satisfied predeclared criteria ({abs(issue_delay_days):.2f}d lead time)"
+    elif observation_delay_days == 0.0 and delay_calc is not None:
+        operational_narrative = f"Onset-day observation with warning issued ({delay_calc['formatted_display']} issue delay)"
+    elif delay_calc is not None:
+        operational_narrative = f"Post-onset detection (+{observation_delay_days:.1f}d observation delay, {delay_calc['formatted_display']} operational issue delay)"
+    else:
+        operational_narrative = "No reference event or event missed"
 
     # Verification of mathematical reconciliation:
     sum_categories = sum(category_summary[c]["total_episodes"] for c in categories)
@@ -743,40 +763,64 @@ def run_chronological_replay(
 
 
 def run_comprehensive_replay_suite(output_path: str = "fixtures/replay_evaluation_summary.json") -> Dict[str, Any]:
-    """Runs multi-scenario, multi-policy auditable evaluation under CDC evaluation rules."""
+    """Runs multi-scenario, multi-policy auditable evaluation under CDC evaluation rules across 15 benchmark scenarios."""
     start_date = datetime(2026, 6, 1, 0, 0, 0, tzinfo=timezone.utc)
 
-    grad_seed = 42
-    abrupt_seed = 101
-    spurious_seed = 202
-
-    grad_df, grad_ref = ScenarioGenerator.generate_heat_gradual_scenario(start_date=start_date, days=45, seed=grad_seed)
-    abrupt_df, abrupt_ref = ScenarioGenerator.generate_heat_abrupt_extreme_scenario(start_date=start_date, days=45, seed=abrupt_seed)
-    spurious_df, spurious_ref = ScenarioGenerator.generate_spurious_health_spike_scenario(start_date=start_date, days=45, seed=spurious_seed)
-
+    # 1. Gradual heat
+    grad_df, grad_ref = ScenarioGenerator.generate_heat_gradual_scenario(start_date=start_date, days=45, seed=42)
+    # 2. Abrupt extreme heat
+    abrupt_df, abrupt_ref = ScenarioGenerator.generate_heat_abrupt_extreme_scenario(start_date=start_date, days=45, seed=101)
+    # 3. Heat exposure without health corroboration
+    heat_no_health_df, heat_no_health_ref = ScenarioGenerator.generate_heat_exposure_without_health_scenario(start_date=start_date, days=45, seed=301)
+    # 4. Spurious health spike without heat exposure
+    spurious_df, spurious_ref = ScenarioGenerator.generate_spurious_health_spike_scenario(start_date=start_date, days=45, seed=202)
+    # 5. Concurrent air quality & respiratory surge
     air_surge_df, air_surge_ref = ScenarioGenerator.generate_air_quality_respiratory_surge_scenario(start_date=start_date, days=45, seed=501)
+    # 6. Air quality stagnation without health surge
     air_stag_df, air_stag_ref = ScenarioGenerator.generate_air_quality_stagnation_without_health_scenario(start_date=start_date, days=45, seed=601)
+    # 7. Respiratory outbreak without pollution
     air_outbrk_df, air_outbrk_ref = ScenarioGenerator.generate_respiratory_outbreak_without_pollution_scenario(start_date=start_date, days=45, seed=701)
-    air_null_df, air_null_ref = ScenarioGenerator.generate_air_quality_null_scenario(start_date=start_date, days=45, seed=801)
-    air_missing_df, air_missing_ref = ScenarioGenerator.generate_air_quality_missing_stale_scenario(start_date=start_date, days=45, seed=901)
+    # 8. Stable null baseline
+    null_df, null_ref = ScenarioGenerator.generate_stable_null_baseline_scenario(start_date=start_date, days=45, seed=801)
+    # 9. Missing environmental input
+    missing_env_df, missing_env_ref = ScenarioGenerator.generate_missing_environmental_input_scenario(start_date=start_date, days=45, seed=902)
+    # 10. Missing health input
+    missing_health_df, missing_health_ref = ScenarioGenerator.generate_missing_health_input_scenario(start_date=start_date, days=45, seed=903)
+    # 11. Stale / quarantined records
+    stale_quar_df, stale_quar_ref = ScenarioGenerator.generate_stale_quarantined_records_scenario(start_date=start_date, days=45, seed=901)
+    # 12. Missing denominator or uncertain geolocation
+    missing_denom_df, missing_denom_ref = ScenarioGenerator.generate_missing_denominator_uncertain_geolocation_scenario(start_date=start_date, days=45, seed=904)
+    # 13. Small cells and overlapping disclosure
+    small_cells_df, small_cells_ref = ScenarioGenerator.generate_small_cells_overlapping_disclosure_scenario(start_date=start_date, days=45, seed=905)
+    # 14. Duplicate, revised, and out-of-order records
+    dup_rev_df, dup_rev_ref = ScenarioGenerator.generate_duplicate_revised_out_of_order_scenario(start_date=start_date, days=45, seed=906)
+    # 15. Baseline drift and changing exposure denominators
+    drift_df, drift_ref = ScenarioGenerator.generate_baseline_drift_changing_exposure_scenario(start_date=start_date, days=45, seed=907)
 
     scenarios = {
-        # Heat Surveillance Benchmarks
-        "heat-gradual": (grad_df, grad_ref, grad_seed),
-        "heat-abrupt-extreme": (abrupt_df, abrupt_ref, abrupt_seed),
-        "spurious-health-spike": (spurious_df, spurious_ref, spurious_seed),
-        # Air Quality & Respiratory Surveillance Vertical Slice (All 5 Fixtures)
+        # Core Hazard Surveillance Benchmarks
+        "heat-gradual": (grad_df, grad_ref, 42),
+        "heat-abrupt-extreme": (abrupt_df, abrupt_ref, 101),
+        "heat-exposure-without-health": (heat_no_health_df, heat_no_health_ref, 301),
+        "spurious-health-spike": (spurious_df, spurious_ref, 202),
         "air-quality-respiratory-surge": (air_surge_df, air_surge_ref, 501),
         "air-quality-stagnation-without-health": (air_stag_df, air_stag_ref, 601),
         "respiratory-outbreak-without-pollution": (air_outbrk_df, air_outbrk_ref, 701),
-        "air-quality-null": (air_null_df, air_null_ref, 801),
-        "air-quality-missing-stale": (air_missing_df, air_missing_ref, 901),
+        "stable-null-baseline": (null_df, null_ref, 801),
+        # Data Quality & Ingestion Edge Cases
+        "missing-environmental-input": (missing_env_df, missing_env_ref, 902),
+        "missing-health-input": (missing_health_df, missing_health_ref, 903),
+        "stale-quarantined-records": (stale_quar_df, stale_quar_ref, 901),
+        "missing-denominator-uncertain-geolocation": (missing_denom_df, missing_denom_ref, 904),
+        "small-cells-overlapping-disclosure": (small_cells_df, small_cells_ref, 905),
+        "duplicate-revised-out-of-order": (dup_rev_df, dup_rev_ref, 906),
+        "baseline-drift-changing-exposure": (drift_df, drift_ref, 907),
     }
 
     policies = ["environmental_only", "health_only", "fused_corroborated"]
 
     suite_results: Dict[str, Any] = {
-        "evaluation_title": "SentinelHealth Auditable Replay Evaluation Suite",
+        "evaluation_title": "SentinelHealth Auditable Replay Evaluation Suite (15 Benchmark Scenarios)",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "disclaimer": "This prototype has not undergone clinical validation, production security assessment or jurisdiction-specific legal/compliance review.",
         "cdc_evaluation_guidelines": [

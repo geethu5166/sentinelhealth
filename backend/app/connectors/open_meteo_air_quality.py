@@ -74,7 +74,8 @@ class OpenMeteoAirQualityConnector:
                         "is_on_site_measurement": False,
                         "is_regulatory_compliance_finding": False,
                         "averaging_window_hours": 1,
-                        "screening_interpretation": "1-hour acute exposure screening signal; 60 ug/m3 NAAQS applies to 24-hour mean.",
+                        "hourly_threshold_label": "Configurable illustrative hourly screening threshold; not clinically validated.",
+                        "screening_interpretation": "Configurable illustrative hourly screening threshold; not clinically validated. 60 ug/m3 India NAAQS standard applies strictly to completed 24-hour averages.",
                         "latitude": latitude,
                         "longitude": longitude,
                         "retrieved_at": retrieval_time.isoformat(),
@@ -184,10 +185,12 @@ class OpenMeteoAirQualityConnector:
                         "valid_hour_count": hour_count,
                         "coverage_pct": coverage_pct,
                         "coverage_status": "complete",
+                        "completeness_rule": "Prototype's configured completeness rule requiring >= 18/24 valid hours (>= 75% coverage).",
                         "threshold_reference": "NAAQS_2009_24h_standard_60_ug_m3",
                         "threshold_policy_version": "0.2.0",
                         "is_model_derived": True,
                         "is_regulatory_compliance_finding": False,
+                        "aggregation_type": "calendar_day_mean",
                     },
                 })
             else:
@@ -205,8 +208,10 @@ class OpenMeteoAirQualityConnector:
                         "valid_hour_count": hour_count,
                         "coverage_pct": coverage_pct,
                         "coverage_status": "incomplete",
-                        "warning": f"Insufficient data coverage ({hour_count}/24 hours, {coverage_pct}% < 75%). Daily mean not estimable.",
+                        "completeness_rule": "Prototype's configured completeness rule requiring >= 18/24 valid hours (>= 75% coverage).",
+                        "warning": f"Insufficient data coverage ({hour_count}/24 hours, {coverage_pct}% < 75%). Daily mean not estimable under prototype's configured completeness rule.",
                         "is_regulatory_compliance_finding": False,
+                        "aggregation_type": "calendar_day_incomplete",
                     },
                 })
 

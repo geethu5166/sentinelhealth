@@ -161,3 +161,39 @@ def test_provenance_and_version_export():
     assert meta["configuration"]["temp_threshold_c"] == 39.0
     assert meta["configuration"]["eligible_pre_onset_lead_days"] == 2
 
+
+def test_exact_timestamp_delay_arithmetic_regression():
+    """Regression test ensuring exact mathematical delay calculation from onset and alert_issued_at.
+
+    Directly addresses reporting discrepancies:
+    1. July 2, 00:00 -> July 3, 14:00 = 38 hours = +1.5833 days (not +1.01).
+    2. November 3, 00:00 -> November 4, 10:00 = 34 hours = +1.4167 days (not +1.04).
+    3. July 15, 12:00 -> July 15, 14:00 = 2 hours = +0.0833 days.
+    """
+    from app.replay.runner import calculate_exact_time_delay
+
+    # Case 1: Heat gradual (July 2, 00:00 -> July 3, 14:00)
+    onset_1 = datetime(2026, 7, 2, 0, 0, 0, tzinfo=timezone.utc)
+    issue_1 = datetime(2026, 7, 3, 14, 0, 0, tzinfo=timezone.utc)
+    res_1 = calculate_exact_time_delay(onset_1, issue_1)
+    assert res_1["total_hours"] == 38.0
+    assert pytest.approx(res_1["total_days"], 0.001) == 1.5833
+    assert res_1["formatted_display"] == "38.0h (+1.58d)"
+
+    # Case 2: Air quality respiratory surge (Nov 3, 00:00 -> Nov 4, 10:00)
+    onset_2 = datetime(2026, 11, 3, 0, 0, 0, tzinfo=timezone.utc)
+    issue_2 = datetime(2026, 11, 4, 10, 0, 0, tzinfo=timezone.utc)
+    res_2 = calculate_exact_time_delay(onset_2, issue_2)
+    assert res_2["total_hours"] == 34.0
+    assert pytest.approx(res_2["total_days"], 0.001) == 1.4167
+    assert res_2["formatted_display"] == "34.0h (+1.42d)"
+
+    # Case 3: Abrupt extreme heat (July 15, 12:00 -> July 15, 14:00)
+    onset_3 = datetime(2026, 7, 15, 12, 0, 0, tzinfo=timezone.utc)
+    issue_3 = datetime(2026, 7, 15, 14, 0, 0, tzinfo=timezone.utc)
+    res_3 = calculate_exact_time_delay(onset_3, issue_3)
+    assert res_3["total_hours"] == 2.0
+    assert pytest.approx(res_3["total_days"], 0.001) == 0.0833
+    assert res_3["formatted_display"] == "2.0h (+0.08d)"
+
+

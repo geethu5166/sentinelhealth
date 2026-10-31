@@ -100,6 +100,8 @@ class AirQualityPlaybook:
             "assumptions": {
                 "district": district_id,
                 "exposure_threshold_ug_m3": 60.0,
+                "threshold_disclaimer": "Configurable illustrative screening threshold; not clinically validated.",
+                "completeness_rule": "Prototype's configured completeness rule requiring >= 18/24 valid hours (>= 75% coverage).",
                 "ethical_constraints": cls.BOUNDARIES,
             },
             "completion_evidence_required": (

@@ -31,10 +31,10 @@ def test_poisson_baseline_fit():
     data = []
     for d in range(25):
         t = start + timedelta(days=d)
-        data.append({"timestamp": t, "value": 15.0, "exposure": 1000})
+        data.append({"timestamp": t, "value": 14.0 + float(d % 3), "exposure": 1000})
 
-    df = pd.DataFrame(data)
     model = PoissonCountBaseline(min_samples=14)
+    df = pd.DataFrame(data)
 
     target_time = start + timedelta(days=25)
     pred = model.fit_predict(df, target_time, current_exposure=1000)
