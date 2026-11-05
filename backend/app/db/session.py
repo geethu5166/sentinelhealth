@@ -37,7 +37,7 @@ async def set_tenant_context(session: AsyncSession, tenant_id: uuid.UUID) -> Non
         return
     try:
         await session.execute(
-            text("SET LOCAL app.current_tenant_id = :tid"),
+            text("SELECT set_config('app.current_tenant_id', :tid, true)"),
             {"tid": str(tenant_id)},
         )
     except Exception:
