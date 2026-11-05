@@ -99,4 +99,43 @@ async def test_get_replay_summary_stored_benchmark_metadata(client: AsyncClient,
     assert "policy_comparisons" in data
 
 
+@pytest.mark.asyncio
+async def test_batch_ingestion_api_flow(client: AsyncClient, auth_headers: dict):
+    """Verifies that POST /api/v1/ingestion/batches accepts batches, creates signals, and generates alerts."""
+    now_iso = "2026-11-05T12:00:00Z"
+    payload = {
+        "source_id": "test_weather_station_api",
+        "batch_id": "batch-test-api-01",
+        "records": [
+            {
+                "metric_code": "apparent_temperature",
+                "signal_family": "environmental",
+                "period_start": now_iso,
+                "period_end": now_iso,
+                "value": 43.0,
+                "unit": "celsius",
+                "geography_id": "DIST-DHANPUR",
+            },
+            {
+                "metric_code": "heat_exhaustion_contacts",
+                "signal_family": "clinical_service",
+                "period_start": now_iso,
+                "period_end": now_iso,
+                "value": 25.0,
+                "unit": "encounters",
+                "contributor_count": 25,
+                "geography_id": "DIST-DHANPUR",
+            },
+        ],
+    }
+    response = await client.post("/api/v1/ingestion/batches", json=payload, headers=auth_headers)
+    assert response.status_code in [200, 201, 202]
+    data = response.json()
+    assert data["status"] == "accepted"
+    assert data["batch_id"] == "batch-test-api-01"
+    assert data["records_accepted"] == 2
+    assert data["alert_id"] is not None
+
+
+
 

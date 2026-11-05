@@ -73,7 +73,7 @@ export const TasksPage: React.FC = () => {
           <CardContent className="space-y-3">
             <textarea
               className="w-full text-xs p-3 border rounded-md bg-background min-h-[80px]"
-              placeholder="e.g. Verified cold water points active in bays 1-4; adjusted outdoor shift to commence at 06:00..."
+              placeholder="Enter completion evidence (e.g. cold water points active in bays 1-4, adjusted outdoor shift)..."
               value={evidenceText}
               onChange={(e) => setEvidenceText(e.target.value)}
             />

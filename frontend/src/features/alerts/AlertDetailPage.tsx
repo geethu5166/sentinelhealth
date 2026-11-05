@@ -179,7 +179,7 @@ export const AlertDetailPage: React.FC = () => {
           {/* Evidence Table with Suppression Check */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">Granular Evidence Data Points</CardTitle>
+              <CardTitle className="text-sm">Evidence Breakdown &amp; Granular Data Points</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <table className="w-full text-xs">
