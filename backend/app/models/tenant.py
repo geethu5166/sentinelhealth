@@ -88,7 +88,7 @@ class Membership(Base, UUIDMixin):
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
     role: Mapped[MembershipRole] = mapped_column(
-        Enum(MembershipRole, name="membership_role", create_constraint=True),
+        Enum(MembershipRole, name="membership_role", values_callable=lambda x: [e.value for e in x], create_constraint=True),
         nullable=False,
     )
     scopes: Mapped[dict | None] = mapped_column(JSON, nullable=True)

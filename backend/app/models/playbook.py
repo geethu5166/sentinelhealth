@@ -78,7 +78,7 @@ class Playbook(Base, UUIDMixin, TimestampMixin):
     action_tiers: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     approval_status: Mapped[PlaybookApprovalStatus] = mapped_column(
-        Enum(PlaybookApprovalStatus, name="playbook_approval_status", create_constraint=True),
+        Enum(PlaybookApprovalStatus, name="playbook_approval_status", values_callable=lambda x: [e.value for e in x], create_constraint=True),
         nullable=False,
         default=PlaybookApprovalStatus.DRAFT,
     )
@@ -165,7 +165,7 @@ class PreventiveTask(Base, UUIDMixin, TimestampMixin):
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     status: Mapped[TaskStatus] = mapped_column(
-        Enum(TaskStatus, name="task_status", create_constraint=True),
+        Enum(TaskStatus, name="task_status", values_callable=lambda x: [e.value for e in x], create_constraint=True),
         nullable=False,
         default=TaskStatus.PENDING,
     )

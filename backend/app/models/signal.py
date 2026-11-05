@@ -98,10 +98,10 @@ class DataSource(Base, UUIDMixin, TimestampMixin):
     code: Mapped[str] = mapped_column(String(100), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     signal_family: Mapped[SignalFamily] = mapped_column(
-        Enum(SignalFamily, name="signal_family", create_constraint=True), nullable=False
+        Enum(SignalFamily, name="signal_family", values_callable=lambda x: [e.value for e in x], create_constraint=True), nullable=False
     )
     source_type: Mapped[SourceType] = mapped_column(
-        Enum(SourceType, name="source_type", create_constraint=True), nullable=False
+        Enum(SourceType, name="source_type", values_callable=lambda x: [e.value for e in x], create_constraint=True), nullable=False
     )
     provider: Mapped[str | None] = mapped_column(String(255), nullable=True)
     schema_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -128,7 +128,7 @@ class IngestionRun(Base, UUIDMixin):
         UUID(as_uuid=True), ForeignKey("data_sources.id", ondelete="CASCADE"), nullable=False
     )
     status: Mapped[IngestionStatus] = mapped_column(
-        Enum(IngestionStatus, name="ingestion_status", create_constraint=True), nullable=False
+        Enum(IngestionStatus, name="ingestion_status", values_callable=lambda x: [e.value for e in x], create_constraint=True), nullable=False
     )
     records_received: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     records_accepted: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -189,7 +189,9 @@ class SignalRecord(Base, UUIDMixin):
     source_record_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     record_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     schema_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    signal_family: Mapped[str] = mapped_column(String(50), nullable=False)
+    signal_family: Mapped[SignalFamily] = mapped_column(
+        Enum(SignalFamily, name="signal_family", values_callable=lambda x: [e.value for e in x], create_constraint=True), nullable=False
+    )
     metric_code: Mapped[str] = mapped_column(String(100), nullable=False)
     value: Mapped[Decimal] = mapped_column(Numeric(20, 6), nullable=False)
     unit: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -223,17 +225,17 @@ class SignalRecord(Base, UUIDMixin):
         UUID(as_uuid=True), ForeignKey("workplaces.id"), nullable=True
     )
     location_basis: Mapped[LocationBasis | None] = mapped_column(
-        Enum(LocationBasis, name="location_basis", create_constraint=True), nullable=True
+        Enum(LocationBasis, name="location_basis", values_callable=lambda x: [e.value for e in x], create_constraint=True), nullable=True
     )
     location_confidence: Mapped[LocationConfidence | None] = mapped_column(
-        Enum(LocationConfidence, name="location_confidence", create_constraint=True), nullable=True
+        Enum(LocationConfidence, name="location_confidence", values_callable=lambda x: [e.value for e in x], create_constraint=True), nullable=True
     )
     mapping_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
     quality_flags: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     completeness: Mapped[Decimal | None] = mapped_column(Numeric(5, 4), nullable=True)
     provenance: Mapped[str | None] = mapped_column(String(500), nullable=True)
     data_label: Mapped[DataLabel] = mapped_column(
-        Enum(DataLabel, name="data_label", create_constraint=True), nullable=False
+        Enum(DataLabel, name="data_label", values_callable=lambda x: [e.value for e in x], create_constraint=True), nullable=False
     )
     is_current: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
     created_at: Mapped[datetime] = mapped_column(

@@ -88,16 +88,16 @@ class Alert(Base, UUIDMixin, TimestampMixin):
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
     hazard: Mapped[Hazard] = mapped_column(
-        Enum(Hazard, name="hazard_type", create_constraint=True), nullable=False
+        Enum(Hazard, name="hazard", values_callable=lambda x: [e.value for e in x], create_constraint=True), nullable=False
     )
     evidence_class: Mapped[EvidenceClass] = mapped_column(
-        Enum(EvidenceClass, name="evidence_class", create_constraint=True), nullable=False
+        Enum(EvidenceClass, name="evidence_class", values_callable=lambda x: [e.value for e in x], create_constraint=True), nullable=False
     )
     severity: Mapped[AlertSeverity] = mapped_column(
-        Enum(AlertSeverity, name="alert_severity", create_constraint=True), nullable=False
+        Enum(AlertSeverity, name="alert_severity", values_callable=lambda x: [e.value for e in x], create_constraint=True), nullable=False
     )
     status: Mapped[AlertStatus] = mapped_column(
-        Enum(AlertStatus, name="alert_status", create_constraint=True), nullable=False, default=AlertStatus.NEW
+        Enum(AlertStatus, name="alert_status", values_callable=lambda x: [e.value for e in x], create_constraint=True), nullable=False, default=AlertStatus.NEW
     )
     geography_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("geographies.id"), nullable=False

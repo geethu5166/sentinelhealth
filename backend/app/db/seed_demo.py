@@ -21,6 +21,7 @@ from sqlalchemy import select
 os.environ.setdefault("SENTINEL_ENVIRONMENT", "local")
 os.environ["SENTINEL_DEMO_MODE"] = "true"
 
+from app.core.config import settings
 from app.db.base import Base
 from app.db.session import async_session_factory, engine
 from app.models.alert import (
@@ -55,10 +56,18 @@ from app.models.tenant import Membership, MembershipRole, Tenant, User
 async def seed_demo():
     print("[*] Starting SentinelHealth demonstration seeder...")
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    try:
+        from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+        mig_engine = create_async_engine(settings.MIGRATION_DATABASE_URL)
+        async with mig_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        seed_factory = async_sessionmaker(bind=mig_engine, class_=AsyncSession, expire_on_commit=False)
+    except Exception as exc:
+        print("[!] mig_engine failed:", type(exc).__name__, exc)
+        mig_engine = None
+        seed_factory = async_session_factory
 
-    async with async_session_factory() as session:
+    async with seed_factory() as session:
         # 1. Tenants (Clean separation of public health vs occupational health)
         res = await session.execute(select(Tenant).where(Tenant.slug == "district_health_authority"))
         dha_tenant = res.scalar_one_or_none()

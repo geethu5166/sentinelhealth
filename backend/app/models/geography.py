@@ -10,6 +10,7 @@ from geoalchemy2 import Geometry
 from sqlalchemy import (
     Boolean,
     DateTime,
+    Enum,
     Float,
     ForeignKey,
     Index,
@@ -50,7 +51,10 @@ class Geography(Base, UUIDMixin, TimestampMixin):
     )
     code: Mapped[str] = mapped_column(String(50), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    level: Mapped[str] = mapped_column(String(50), nullable=False)  # district, sub_district, ward, site
+    level: Mapped[GeographyLevel] = mapped_column(
+        Enum(GeographyLevel, name="geography_level", values_callable=lambda x: [e.value for e in x], create_constraint=True),
+        nullable=False,
+    )
     geometry: Mapped[str | None] = mapped_column(
         Geometry(geometry_type="MULTIPOLYGON", srid=4326, spatial_index=False), nullable=True
     )
