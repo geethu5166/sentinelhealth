@@ -30,30 +30,36 @@ async_session_factory = async_sessionmaker(
 )
 
 
-async def set_tenant_context(session: AsyncSession, tenant_id: uuid.UUID) -> None:
-    """Set the PostgreSQL session variable used by row-level security policies."""
+def _session_dialect_name(session: AsyncSession) -> str | None:
     bind = session.bind
-    if bind is not None and getattr(bind.dialect, "name", None) == "sqlite":
+    if bind is None:
+        try:
+            bind = session.get_bind()
+        except Exception:
+            return None
+    return getattr(getattr(bind, "dialect", None), "name", None)
+
+
+async def set_tenant_context(session: AsyncSession, tenant_id: uuid.UUID) -> None:
+    """Set the PostgreSQL session variable used by row-level security policies.
+
+    Uses set_config(..., is_local=true) so the value can be bound as a parameter.
+    Plain ``SET LOCAL ... = :tid`` is rejected by PostgreSQL/asyncpg and, if the
+    error is swallowed, leaves the open transaction aborted.
+    """
+    if _session_dialect_name(session) == "sqlite":
         return
-    try:
-        await session.execute(
-            text("SET LOCAL app.current_tenant_id = :tid"),
-            {"tid": str(tenant_id)},
-        )
-    except Exception:
-        # Ignore for non-PostgreSQL dialects such as SQLite in test runner
-        pass
+    await session.execute(
+        text("SELECT set_config('app.current_tenant_id', :tid, true)"),
+        {"tid": str(tenant_id)},
+    )
 
 
 async def reset_tenant_context(session: AsyncSession) -> None:
     """Explicitly reset the PostgreSQL tenant session variable to prevent pooled connection leakage."""
-    bind = session.bind
-    if bind is not None and getattr(bind.dialect, "name", None) == "sqlite":
+    if _session_dialect_name(session) == "sqlite":
         return
-    try:
-        await session.execute(text("RESET app.current_tenant_id"))
-    except Exception:
-        pass
+    await session.execute(text("SELECT set_config('app.current_tenant_id', '', true)"))
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

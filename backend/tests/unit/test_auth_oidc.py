@@ -51,6 +51,17 @@ def test_non_local_config_refuses_demo_mode():
         )
 
 
+def test_demo_token_preserves_underscored_role(monkeypatch):
+    """Demo token role segment may contain underscores and must not be truncated."""
+    monkeypatch.setattr(settings, "DEMO_MODE", True)
+    monkeypatch.setattr(settings, "ENVIRONMENT", "local")
+
+    payload = validate_token("demo-token-safety-workplace_safety_manager")
+    assert payload.email == "safety@demo.local"
+    assert payload.roles == ["workplace_safety_manager"]
+    assert payload.sub == "demo-sub-safety"
+
+
 def test_demo_token_rejected_when_demo_mode_disabled(monkeypatch):
     """Demo tokens must be rejected when DEMO_MODE is False."""
     monkeypatch.setattr(settings, "DEMO_MODE", False)

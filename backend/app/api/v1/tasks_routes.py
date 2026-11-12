@@ -215,6 +215,24 @@ async def update_task(
         evidence=payload.completion_evidence,
     )
     db.add(event)
+
+    from app.audit.service import log_audit_event
+
+    await log_audit_event(
+        db,
+        action="task.update",
+        resource_type="preventive_task",
+        resource_id=str(task.id),
+        tenant_id=current_user.current_tenant_id,
+        actor_id=current_user.id,
+        details={
+            "from_status": from_status_val,
+            "to_status": task.status.value,
+            "has_completion_evidence": bool(payload.completion_evidence),
+            "approval_decision": payload.approval_decision,
+        },
+    )
+
     await db.commit()
     await db.refresh(task)
 

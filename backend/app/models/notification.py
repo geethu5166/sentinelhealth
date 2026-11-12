@@ -9,7 +9,6 @@ from typing import Optional
 
 from sqlalchemy import (
     DateTime,
-    Enum,
     ForeignKey,
     Index,
     Integer,
@@ -20,7 +19,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDMixin
+from app.db.base import Base, TimestampMixin, UUIDMixin, pg_enum
 
 __all__ = [
     "NotificationType",
@@ -76,7 +75,7 @@ class NotificationOutbox(Base, UUIDMixin):
         index=True,
     )
     notification_type: Mapped[NotificationType] = mapped_column(
-        Enum(NotificationType, name="notification_type_enum"),
+        pg_enum(NotificationType, "notification_type_enum"),
         nullable=False,
     )
     recipient_role: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -86,7 +85,7 @@ class NotificationOutbox(Base, UUIDMixin):
         nullable=True,
     )
     channel: Mapped[NotificationChannel] = mapped_column(
-        Enum(NotificationChannel, name="notification_channel_enum"),
+        pg_enum(NotificationChannel, "notification_channel_enum"),
         default=NotificationChannel.IN_APP,
         nullable=False,
     )
@@ -94,7 +93,7 @@ class NotificationOutbox(Base, UUIDMixin):
     body_template: Mapped[str] = mapped_column(String(100), nullable=False)
     body_params: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     status: Mapped[NotificationStatus] = mapped_column(
-        Enum(NotificationStatus, name="notification_status_enum"),
+        pg_enum(NotificationStatus, "notification_status_enum"),
         default=NotificationStatus.PENDING,
         nullable=False,
         index=True,
@@ -131,7 +130,7 @@ class NotificationDelivery(Base, UUIDMixin):
         index=True,
     )
     channel: Mapped[NotificationChannel] = mapped_column(
-        Enum(NotificationChannel, name="notification_channel_enum"),
+        pg_enum(NotificationChannel, "notification_channel_enum"),
         nullable=False,
     )
     status: Mapped[str] = mapped_column(String(50), nullable=False)

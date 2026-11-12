@@ -40,7 +40,7 @@ wait_for "Redis" \
   "docker compose exec -T redis redis-cli ping"
 
 wait_for "Keycloak" \
-  "curl -sf http://localhost:8081/health/ready"
+  "curl -sf http://127.0.0.1:9001/health/ready && curl -sf http://127.0.0.1:8081/realms/sentinelhealth"
 
 wait_for "API" \
   "curl -sf http://localhost:8000/health/live"

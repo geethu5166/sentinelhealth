@@ -32,7 +32,7 @@ class AlertEvidenceRead(BaseModel):
     location_uncertainty: Optional[str] = None
     denominator_value: Optional[Decimal] = None
     denominator_unit: Optional[str] = None
-    data_label: str
+    data_label: Optional[str] = None
     model_type: Optional[str] = None
     model_version: Optional[str] = None
     threshold_version: Optional[str] = None

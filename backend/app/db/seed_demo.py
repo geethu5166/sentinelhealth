@@ -22,7 +22,7 @@ os.environ.setdefault("SENTINEL_ENVIRONMENT", "local")
 os.environ["SENTINEL_DEMO_MODE"] = "true"
 
 from app.db.base import Base
-from app.db.session import async_session_factory, engine
+from app.db.session import async_session_factory, engine, set_tenant_context
 from app.models.alert import (
     Alert,
     AlertEvidence,
@@ -54,9 +54,9 @@ from app.models.tenant import Membership, MembershipRole, Tenant, User
 
 async def seed_demo():
     print("[*] Starting SentinelHealth demonstration seeder...")
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Schema must already exist via Alembic (`alembic upgrade head`).
+    # Do not call Base.metadata.create_all here: the runtime app DB role
+    # (sentinel_app) is intentionally NOBYPASSRLS with USAGE-only on public.
 
     async with async_session_factory() as session:
         # 1. Tenants (Clean separation of public health vs occupational health)
@@ -88,27 +88,41 @@ async def seed_demo():
 
         # 2. Users and Memberships
         users_data = [
-            # Public Health Tenant Users
+            # Demo console identities (must match frontend LoginPage / demo tokens)
             {
                 "email": "analyst@demo.local",
-                "name": "Dr. Aisha Rao",
+                "name": "Dr. Ananya Sharma",
                 "role": MembershipRole.PUBLIC_HEALTH_ANALYST,
                 "sub": "demo-sub-analyst",
                 "tenant": dha_tenant,
             },
             {
                 "email": "privacy@demo.local",
-                "name": "Siddharth Verma",
+                "name": "Meera Iyer",
                 "role": MembershipRole.PRIVACY_OFFICER,
                 "sub": "demo-sub-privacy",
                 "tenant": dha_tenant,
             },
-            # Greenfield Occupational Health Users
             {
-                "email": "safety@greenfield.local",
+                "email": "safety@demo.local",
                 "name": "Vikram Patel",
                 "role": MembershipRole.WORKPLACE_SAFETY_MANAGER,
                 "sub": "demo-sub-safety",
+                "tenant": dha_tenant,
+            },
+            {
+                "email": "ohanalyst@demo.local",
+                "name": "Rajesh Kumar",
+                "role": MembershipRole.OCCUPATIONAL_HEALTH_ANALYST,
+                "sub": "demo-sub-ohanalyst",
+                "tenant": dha_tenant,
+            },
+            # Greenfield occupational health users (second tenant isolation demos)
+            {
+                "email": "safety@greenfield.local",
+                "name": "Vikram Patel (Greenfield)",
+                "role": MembershipRole.WORKPLACE_SAFETY_MANAGER,
+                "sub": "demo-sub-safety-gfi",
                 "tenant": gfi_tenant,
             },
             {
@@ -138,7 +152,9 @@ async def seed_demo():
             print(f"  + User: {ud['email']} -> {ud['tenant'].name} ({ud['role'].value})")
 
         # 3. Geographies
-        # Tenant A: District hierarchy
+        # RLS FORCE is enabled on geographies/workplaces/signals/alerts/tasks —
+        # SET LOCAL app.current_tenant_id before each tenant-scoped DML block.
+        await set_tenant_context(session, dha_tenant.id)
         res_g = await session.execute(select(Geography).where(Geography.code == "DIST-DHANPUR", Geography.tenant_id == dha_tenant.id))
         dhanpur_geo = res_g.scalar_one_or_none()
         if not dhanpur_geo:
@@ -154,7 +170,8 @@ async def seed_demo():
             session.add(dhanpur_geo)
             await session.flush()
 
-        # Tenant B: Industrial Zone Geography
+        # Tenant B: Industrial Zone Geography + workplaces
+        await set_tenant_context(session, gfi_tenant.id)
         res_gb = await session.execute(select(Geography).where(Geography.code == "ZONE-LAKSHMI", Geography.tenant_id == gfi_tenant.id))
         lakshmi_zone = res_gb.scalar_one_or_none()
         if not lakshmi_zone:
@@ -170,7 +187,6 @@ async def seed_demo():
             session.add(lakshmi_zone)
             await session.flush()
 
-        # 4. Workplaces (Only Tenant B owns industrial workplace sites)
         res_w = await session.execute(select(Workplace).where(Workplace.code == "SITE-STEEL-01", Workplace.tenant_id == gfi_tenant.id))
         steel_workplace = res_w.scalar_one_or_none()
         if not steel_workplace:
@@ -186,7 +202,6 @@ async def seed_demo():
             session.add(steel_workplace)
             await session.flush()
 
-        # Small workplace site for suppression demonstration
         res_w_small = await session.execute(select(Workplace).where(Workplace.code == "SITE-SUBSTATION-02", Workplace.tenant_id == gfi_tenant.id))
         small_workplace = res_w_small.scalar_one_or_none()
         if not small_workplace:
@@ -206,6 +221,7 @@ async def seed_demo():
 
         # 5. Data Sources (Cleanly isolated per tenant)
         # Tenant A: Environmental + District Clinical Hospital Network
+        await set_tenant_context(session, dha_tenant.id)
         dha_sources = {
             "ENV-REGIONAL-WEATHER": DataSource(
                 tenant_id=dha_tenant.id,
@@ -507,8 +523,13 @@ async def seed_demo():
                 )
             )
 
+        # Flush signals before alerts (migrator BYPASSRLS allows multi-tenant seed;
+        # when running as sentinel_app, call set_tenant_context per tenant block).
+        await session.flush()
+
         # 9. Create Active Demonstration Alerts (One per tenant)
         # Alert 1: Tenant A (District Public Health Warning)
+        await set_tenant_context(session, dha_tenant.id)
         res_al_a = await session.execute(select(Alert).where(Alert.tenant_id == dha_tenant.id))
         if not res_al_a.scalar_one_or_none():
             alert_a = Alert(
@@ -574,6 +595,7 @@ async def seed_demo():
             ])
 
         # Alert 2: Tenant B (Greenfield Industrial Heat Safety Escalation)
+        await set_tenant_context(session, gfi_tenant.id)
         res_al_b = await session.execute(select(Alert).where(Alert.tenant_id == gfi_tenant.id))
         if not res_al_b.scalar_one_or_none():
             alert_b = Alert(

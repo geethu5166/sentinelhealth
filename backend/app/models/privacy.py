@@ -10,7 +10,6 @@ from typing import Optional
 from sqlalchemy import (
     Boolean,
     DateTime,
-    Enum,
     ForeignKey,
     Index,
     String,
@@ -20,7 +19,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDMixin
+from app.db.base import Base, TimestampMixin, UUIDMixin, pg_enum
 
 __all__ = [
     "DisclosureDecisionStatus",
@@ -102,7 +101,7 @@ class DisclosureDecision(Base, UUIDMixin):
     time_range_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     time_range_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     decision: Mapped[DisclosureDecisionStatus] = mapped_column(
-        Enum(DisclosureDecisionStatus, name="disclosure_decision_status_enum"),
+        pg_enum(DisclosureDecisionStatus, "disclosure_decision_status_enum"),
         nullable=False,
     )
     conditions: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -139,7 +138,7 @@ class ExportJob(Base, UUIDMixin):
     export_type: Mapped[str] = mapped_column(String(50), nullable=False)
     parameters: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     status: Mapped[ExportJobStatus] = mapped_column(
-        Enum(ExportJobStatus, name="export_job_status_enum"),
+        pg_enum(ExportJobStatus, "export_job_status_enum"),
         default=ExportJobStatus.PENDING,
         nullable=False,
         index=True,

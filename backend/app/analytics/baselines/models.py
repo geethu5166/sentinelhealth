@@ -58,7 +58,7 @@ class RecentHistoryBaseline:
                 diagnostics={"status": "insufficient_history", "history_count": len(hist)},
             )
 
-        hist["weekday"] = pd.to_datetime(hist["timestamp"]).dt.weekday
+        hist["weekday"] = pd.to_datetime(hist["timestamp"]).dt.day_of_week
         target_weekday = target_timestamp.weekday()
 
         if self.weekday_matching:
@@ -132,7 +132,7 @@ class PoissonCountBaseline:
             fallback = RecentHistoryBaseline()
             return fallback.fit_predict(historical_series, target_timestamp, current_exposure)
 
-        hist["weekday"] = pd.to_datetime(hist["timestamp"]).dt.weekday
+        hist["weekday"] = pd.to_datetime(hist["timestamp"]).dt.day_of_week
         # Simple weekday categorical predictors
         X = pd.get_dummies(hist["weekday"], drop_first=True, dtype=float)
         X = sm.add_constant(X)
@@ -180,4 +180,167 @@ class PoissonCountBaseline:
             pred = fallback.fit_predict(historical_series, target_timestamp, current_exposure)
             pred.diagnostics["poisson_fallback_reason"] = str(e)
             return pred
+
+
+class NegativeBinomialBaseline:
+    """
+    Negative Binomial GLM baseline for overdispersed count outcomes
+    (e.g. ED heat contacts, sickness absence worker-days).
+
+    Uses statsmodels NegativeBinomial when available; falls back to Poisson then
+    recent-history on convergence failure. Predictions are screening estimates,
+    not certified regulatory monitor readings.
+    """
+
+    def __init__(self, min_samples: int = 21):
+        self.min_samples = min_samples
+        self.version = "1.0.0"
+
+    def fit_predict(
+        self,
+        historical_series: pd.DataFrame,
+        target_timestamp: datetime,
+        current_exposure: Optional[float] = None,
+    ) -> BaselinePrediction:
+        import statsmodels.api as sm
+
+        hist = historical_series[historical_series["timestamp"] < target_timestamp].copy()
+        if len(hist) < self.min_samples:
+            return PoissonCountBaseline(min_samples=14).fit_predict(
+                historical_series, target_timestamp, current_exposure
+            )
+
+        hist["weekday"] = pd.to_datetime(hist["timestamp"]).dt.day_of_week
+        X = pd.get_dummies(hist["weekday"], drop_first=True, dtype=float)
+        X = sm.add_constant(X)
+        y = hist["value"].astype(float).clip(lower=0).values
+
+        exposure = hist.get("exposure")
+        offset = (
+            np.log(np.clip(exposure.astype(float).values, 1e-6, None))
+            if exposure is not None and not exposure.isna().all()
+            else None
+        )
+
+        try:
+            model = sm.GLM(y, X, family=sm.families.NegativeBinomial(), offset=offset)
+            res = model.fit(disp=False)
+
+            target_weekday = target_timestamp.weekday()
+            target_x = pd.DataFrame(0.0, index=[0], columns=X.columns)
+            target_x["const"] = 1.0
+            if target_weekday in target_x.columns:
+                target_x[target_weekday] = 1.0
+
+            target_offset = math.log(current_exposure) if current_exposure and current_exposure > 0 else None
+            pred = float(res.predict(target_x, offset=target_offset)[0])
+
+            # NB variance ≈ μ + α μ²; use residual dispersion as α proxy when available
+            alpha = float(getattr(res, "scale", 1.0) or 1.0)
+            variance = max(0.1, pred + alpha * (pred**2))
+            std_err = math.sqrt(variance)
+            lower_bound = max(0.0, pred - 1.96 * std_err)
+            upper_bound = pred + 1.96 * std_err
+
+            return BaselinePrediction(
+                expected_value=round(pred, 4),
+                standard_error=round(std_err, 4),
+                prediction_interval_lower=round(lower_bound, 4),
+                prediction_interval_upper=round(upper_bound, 4),
+                model_type="negative_binomial_glm",
+                model_version=self.version,
+                diagnostics={
+                    "status": "ok",
+                    "evidence_label": "screening",
+                    "aic": round(float(res.aic), 2) if res.aic is not None else None,
+                    "deviance": round(float(res.deviance), 2) if res.deviance is not None else None,
+                    "dispersion_scale": round(alpha, 4),
+                    "sample_size": len(hist),
+                },
+            )
+        except Exception as e:
+            fallback = PoissonCountBaseline(min_samples=14).fit_predict(
+                historical_series, target_timestamp, current_exposure
+            )
+            fallback.diagnostics["negative_binomial_fallback_reason"] = str(e)
+            return fallback
+
+
+class QuasiPoissonBaseline:
+    """
+    Quasi-Poisson style baseline: fit Poisson mean, inflate variance by Pearson
+    dispersion for seasonally overdispersed health counts.
+
+    Suitable when variance >> mean but a full NB fit is unstable. Outputs remain
+    screening evidence (not NAAQS/regulatory certified readings).
+    """
+
+    def __init__(self, min_samples: int = 21):
+        self.min_samples = min_samples
+        self.version = "1.0.0"
+
+    def fit_predict(
+        self,
+        historical_series: pd.DataFrame,
+        target_timestamp: datetime,
+        current_exposure: Optional[float] = None,
+    ) -> BaselinePrediction:
+        import statsmodels.api as sm
+
+        hist = historical_series[historical_series["timestamp"] < target_timestamp].copy()
+        if len(hist) < self.min_samples:
+            return RecentHistoryBaseline().fit_predict(historical_series, target_timestamp, current_exposure)
+
+        hist["weekday"] = pd.to_datetime(hist["timestamp"]).dt.day_of_week
+        X = pd.get_dummies(hist["weekday"], drop_first=True, dtype=float)
+        X = sm.add_constant(X)
+        y = hist["value"].astype(float).clip(lower=0).values
+
+        exposure = hist.get("exposure")
+        offset = (
+            np.log(np.clip(exposure.astype(float).values, 1e-6, None))
+            if exposure is not None and not exposure.isna().all()
+            else None
+        )
+
+        try:
+            model = sm.GLM(y, X, family=sm.families.Poisson(), offset=offset)
+            res = model.fit(disp=False)
+
+            target_weekday = target_timestamp.weekday()
+            target_x = pd.DataFrame(0.0, index=[0], columns=X.columns)
+            target_x["const"] = 1.0
+            if target_weekday in target_x.columns:
+                target_x[target_weekday] = 1.0
+
+            target_offset = math.log(current_exposure) if current_exposure and current_exposure > 0 else None
+            pred = float(res.predict(target_x, offset=target_offset)[0])
+
+            pearson = float(res.pearson_chi2) if res.pearson_chi2 is not None else float(len(hist))
+            df_resid = max(1, int(res.df_resid) if res.df_resid else len(hist) - 1)
+            dispersion = max(1.0, pearson / df_resid)
+            std_err = math.sqrt(max(0.1, pred * dispersion))
+            lower_bound = max(0.0, pred - 1.96 * std_err)
+            upper_bound = pred + 1.96 * std_err
+
+            return BaselinePrediction(
+                expected_value=round(pred, 4),
+                standard_error=round(std_err, 4),
+                prediction_interval_lower=round(lower_bound, 4),
+                prediction_interval_upper=round(upper_bound, 4),
+                model_type="quasi_poisson_glm",
+                model_version=self.version,
+                diagnostics={
+                    "status": "ok",
+                    "evidence_label": "screening",
+                    "dispersion": round(dispersion, 4),
+                    "aic": round(float(res.aic), 2) if res.aic is not None else None,
+                    "sample_size": len(hist),
+                },
+            )
+        except Exception as e:
+            fallback = RecentHistoryBaseline().fit_predict(historical_series, target_timestamp, current_exposure)
+            fallback.diagnostics["quasi_poisson_fallback_reason"] = str(e)
+            return fallback
+
 

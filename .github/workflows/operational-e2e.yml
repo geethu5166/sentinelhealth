@@ -8,6 +8,8 @@ on:
       - 'frontend/**'
       - 'infra/**'
       - 'compose.yaml'
+      - 'compose.prod.yaml'
+      - 'tests/e2e/**'
       - '.github/workflows/operational-e2e.yml'
 
 jobs:
@@ -42,8 +44,8 @@ jobs:
           APP_DB_USER=sentinel_app
           APP_DB_PASSWORD=ephemeral_app_pass_2024
 
-          SENTINEL_ENVIRONMENT=test
-          SENTINEL_DEMO_MODE=false
+          SENTINEL_ENVIRONMENT=local
+          SENTINEL_DEMO_MODE=true
           CELERY_TASK_ALWAYS_EAGER=false
 
           SENTINEL_DATABASE_URL=postgresql+asyncpg://sentinel_app:ephemeral_app_pass_2024@postgres:5432/sentinelhealth
@@ -77,20 +79,62 @@ jobs:
           echo "[*] Executing database migrations..."
           docker compose run --rm migrate
 
-          # Wait for Keycloak health endpoint
+          # Wait for Keycloak readiness (management health :9001 + imported realm)
           echo "[*] Waiting for Keycloak readiness..."
-          timeout 120 bash -c 'until curl -s -f http://localhost:8081/health/ready; do sleep 3; done'
+          if ! timeout 180 bash -c 'until curl -sf http://127.0.0.1:9001/health/ready >/dev/null; do sleep 3; done'; then
+            echo "[!] Keycloak management health did not become ready"
+            docker compose ps
+            docker compose logs --no-color --tail=200 keycloak || true
+            exit 1
+          fi
+          if ! timeout 120 bash -c 'until curl -sf http://127.0.0.1:8081/realms/sentinelhealth >/dev/null; do sleep 3; done'; then
+            echo "[!] Keycloak realm sentinelhealth not importable/reachable"
+            docker compose logs --no-color --tail=200 keycloak || true
+            exit 1
+          fi
+
+          # Seed demo fixtures as migrator (BYPASSRLS / DDL owner). App role is DML-only.
+          echo "[*] Seeding demo surveillance fixtures..."
+          docker compose run --rm --no-deps \
+            -e SENTINEL_DATABASE_URL="postgresql+asyncpg://sentinel_migrator:ephemeral_migrator_pass_2024@postgres:5432/sentinelhealth" \
+            api python -m app.db.seed_demo
 
           # Start API, Celery Worker, Frontend, and Nginx
           echo "[*] Starting API, non-eager Celery worker, Frontend, and Nginx..."
           docker compose up -d api worker frontend nginx
 
           # Wait for API live check
-          timeout 60 bash -c 'until curl -s -f http://localhost:8000/health/live; do sleep 2; done'
+          timeout 90 bash -c 'until curl -s -f http://localhost:8000/health/live; do sleep 2; done'
           
           # Wait for Frontend / Nginx
-          timeout 60 bash -c 'until curl -s -f http://localhost:8080/; do sleep 2; done'
+          timeout 90 bash -c 'until curl -s -f http://localhost:8080/; do sleep 2; done'
           echo "[+] Full stack is healthy and operational."
+
+          echo "[*] API smoke: demo token list + detail..."
+          TOKEN="demo-token-safety-workplace_safety_manager"
+          ME=$(curl -sS -H "Authorization: Bearer ${TOKEN}" http://127.0.0.1:8000/api/v1/me || true)
+          echo "ME=${ME}" | head -c 800; echo
+          ALERTS=$(curl -sS -H "Authorization: Bearer ${TOKEN}" "http://127.0.0.1:8000/api/v1/alerts" || true)
+          echo "ALERTS=${ALERTS}" | head -c 1200; echo
+          python - <<'PY'
+          import json, os, sys, urllib.request
+          token = "demo-token-safety-workplace_safety_manager"
+          def get(path):
+              req = urllib.request.Request(
+                  f"http://127.0.0.1:8000/api/v1{path}",
+                  headers={"Authorization": f"Bearer {token}"},
+              )
+              with urllib.request.urlopen(req, timeout=20) as resp:
+                  body = resp.read().decode()
+                  print(path, resp.status, body[:400])
+                  return resp.status, json.loads(body) if body else None
+          status, alerts = get("/alerts")
+          assert status == 200 and isinstance(alerts, list) and alerts, alerts
+          aid = alerts[0]["id"]
+          status, detail = get(f"/alerts/{aid}")
+          assert status == 200 and detail and detail.get("id") == aid, detail
+          print("[+] API smoke passed for alert list/detail")
+          PY
 
       - name: Run Playwright Browser Acceptance Test
         env:
@@ -103,6 +147,12 @@ jobs:
           SENTINEL_TEST_PASS_2: "demo123"
         run: |
           python -m pytest tests/e2e/test_live_browser_workflow.py -v --tb=short
+
+      - name: Dump API logs on failure
+        if: failure()
+        run: |
+          docker compose logs --no-color --tail=250 api || true
+          docker compose logs --no-color --tail=100 frontend nginx || true
 
       - name: Tear Down and Clean Up Test Containers
         if: always()

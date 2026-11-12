@@ -75,11 +75,15 @@ def validate_token(token: str, jwks: Optional[Dict[str, Any]] = None) -> TokenPa
                 f"Demo token rejected: demo authentication is forbidden in '{settings.ENVIRONMENT}' environment."
             )
         # Format: demo-token-<email_prefix>-<role>
-        parts = token.split("-")
-        email = f"{parts[2]}@demo.local" if len(parts) > 2 else "analyst@demo.local"
-        role = parts[3] if len(parts) > 3 else "public_health_analyst"
+        # Role may contain underscores (e.g. workplace_safety_manager); only split once
+        # after the email prefix so the full role string is preserved.
+        remainder = token.removeprefix("demo-token-")
+        email_prefix, sep, role = remainder.partition("-")
+        if not sep:
+            email_prefix, role = "analyst", "public_health_analyst"
+        email = f"{email_prefix}@demo.local"
         return TokenPayload(
-            sub=f"demo-sub-{parts[2] if len(parts) > 2 else 'analyst'}",
+            sub=f"demo-sub-{email_prefix}",
             email=email,
             preferred_username=email,
             roles=[role],

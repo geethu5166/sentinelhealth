@@ -1,61 +1,59 @@
 import React from "react";
-import { AlertCircle, Clock, HeartPulse, TrendingUp } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { AlertCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { PageHeader } from "../../components/ui/page-header";
 
 export const ImpactPage: React.FC = () => {
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Health & Resilience Operational Impact</h2>
-        <p className="text-muted-foreground text-sm">
-          Track response timing, completed mitigations, and prospective evaluation plans.
-        </p>
-      </div>
+    <div className="mx-auto max-w-7xl animate-fade-in space-y-6">
+      <PageHeader
+        title="Operational impact"
+        description="Track response timing, completed mitigations, and prospective evaluation plans."
+      />
 
-      <Card className="border-amber-500/30 bg-amber-500/5">
+      <Card className="border-amber-500/30 bg-amber-500/5 shadow-panel">
         <CardHeader className="pb-2">
-          <CardTitle className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-            <AlertCircle className="h-4 w-4" /> Prospective Evaluation Principles
+          <CardTitle className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
+            <AlertCircle className="h-4 w-4" aria-hidden /> Prospective evaluation principles
           </CardTitle>
         </CardHeader>
-        <CardContent className="text-xs text-muted-foreground">
-          Observational before/after changes alone must not be described as caused by the system.
-          Genuine health and absence reductions must be demonstrated through a pre-specified stepped-wedge or interrupted time-series rollout with epidemiological oversight.
+        <CardContent className="text-xs text-muted-foreground leading-relaxed">
+          Observational before/after changes alone must not be described as caused by the system. Genuine health and
+          absence reductions require a pre-specified stepped-wedge or interrupted time-series rollout with
+          epidemiological oversight. Metrics below are <strong>illustrative placeholders</strong> for the MVP shell —
+          not measured outcomes from this deployment.
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <Card className="shadow-panel">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-semibold text-muted-foreground">Mean Time to Acknowledgment</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground">Mean time to acknowledgment</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">24 min</div>
-            <p className="text-[11px] text-muted-foreground mt-1">From initial multi-signal detection to human review</p>
+            <div className="font-display text-3xl font-semibold text-primary">—</div>
+            <p className="mt-1 text-[11px] text-muted-foreground">Instrument after pilot logging is enabled</p>
           </CardContent>
         </Card>
-
-        <Card>
+        <Card className="shadow-panel">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-semibold text-muted-foreground">Completed Mitigations</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground">Completed mitigations</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">92%</div>
-            <p className="text-[11px] text-muted-foreground mt-1">Preventive tasks verified with on-site inspection</p>
+            <div className="font-display text-3xl font-semibold">—</div>
+            <p className="mt-1 text-[11px] text-muted-foreground">Derived from verified task completions</p>
           </CardContent>
         </Card>
-
-        <Card>
+        <Card className="shadow-panel">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-semibold text-muted-foreground">Lead Over Conventional Reporting</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground">Lead over conventional reporting</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">+48 hours</div>
-            <p className="text-[11px] text-muted-foreground mt-1">Earlier than retrospective monthly clinic reports</p>
+            <div className="font-display text-3xl font-semibold">—</div>
+            <p className="mt-1 text-[11px] text-muted-foreground">Requires paired clinic report baselines</p>
           </CardContent>
         </Card>
       </div>
     </div>
   );
 };
-

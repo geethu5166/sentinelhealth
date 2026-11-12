@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from sqlalchemy import (
     Boolean,
     DateTime,
-    Enum,
     ForeignKey,
     Index,
     Integer,
@@ -20,7 +19,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDMixin
+from app.db.base import Base, TimestampMixin, UUIDMixin, pg_enum
 
 __all__ = [
     "PlaybookApprovalStatus",
@@ -78,7 +77,7 @@ class Playbook(Base, UUIDMixin, TimestampMixin):
     action_tiers: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     approval_status: Mapped[PlaybookApprovalStatus] = mapped_column(
-        Enum(PlaybookApprovalStatus, name="playbook_approval_status", create_constraint=True),
+        pg_enum(PlaybookApprovalStatus, "playbook_approval_status", create_constraint=True),
         nullable=False,
         default=PlaybookApprovalStatus.DRAFT,
     )
@@ -165,7 +164,7 @@ class PreventiveTask(Base, UUIDMixin, TimestampMixin):
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     status: Mapped[TaskStatus] = mapped_column(
-        Enum(TaskStatus, name="task_status", create_constraint=True),
+        pg_enum(TaskStatus, "task_status", create_constraint=True),
         nullable=False,
         default=TaskStatus.PENDING,
     )

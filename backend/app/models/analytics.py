@@ -10,7 +10,6 @@ from decimal import Decimal
 from sqlalchemy import (
     Boolean,
     DateTime,
-    Enum,
     ForeignKey,
     Index,
     Integer,
@@ -21,7 +20,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, UUIDMixin
+from app.db.base import Base, UUIDMixin, pg_enum
 
 __all__ = [
     "AggregationMethod",
@@ -111,7 +110,7 @@ class BaselineModel(Base, UUIDMixin):
         UUID(as_uuid=True), ForeignKey("geographies.id"), nullable=True
     )
     model_type: Mapped[BaselineModelType] = mapped_column(
-        Enum(BaselineModelType, name="baseline_model_type", create_constraint=True), nullable=False
+        pg_enum(BaselineModelType, "baseline_model_type", create_constraint=True), nullable=False
     )
     model_version: Mapped[str] = mapped_column(String(50), nullable=False)
     configuration: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -152,10 +151,10 @@ class DetectionRun(Base, UUIDMixin):
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
     run_type: Mapped[DetectionRunType] = mapped_column(
-        Enum(DetectionRunType, name="detection_run_type", create_constraint=True), nullable=False
+        pg_enum(DetectionRunType, "detection_run_type", create_constraint=True), nullable=False
     )
     status: Mapped[DetectionRunStatus] = mapped_column(
-        Enum(DetectionRunStatus, name="detection_run_status", create_constraint=True), nullable=False
+        pg_enum(DetectionRunStatus, "detection_run_status", create_constraint=True), nullable=False
     )
     scoring_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     inputs_available_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

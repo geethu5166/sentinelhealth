@@ -22,7 +22,6 @@ export const App: React.FC = () => {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
 
-        {/* Authenticated Dashboard Routes */}
         <Route
           element={
             <ProtectedRoute>
@@ -44,8 +43,9 @@ export const App: React.FC = () => {
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
+
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );
 };
-

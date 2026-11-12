@@ -6,7 +6,7 @@ import { BrowserRouter } from "react-router-dom";
 import { TasksPage } from "../src/features/tasks/TasksPage";
 
 describe("TasksPage", () => {
-  it("renders preventive tasks page header and filter controls", () => {
+  it("renders the mitigation tasks header", () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -19,8 +19,7 @@ describe("TasksPage", () => {
       </QueryClientProvider>
     );
 
-    expect(screen.getByText(/Preventive Action & Mitigation Tasks/i)).toBeDefined();
+    expect(screen.getByText(/Mitigation tasks/i)).toBeDefined();
     expect(screen.getByText(/Track assigned playbook tasks/i)).toBeDefined();
   });
 });
-
