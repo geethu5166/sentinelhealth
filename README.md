@@ -1,11 +1,5 @@
 # SentinelHealth
 
-> **⚠️ PROTOTYPE — NOT FOR PRODUCTION USE**
->
-> This is a hackathon prototype. It uses demo credentials, self-signed tokens,
-> and synthetic data. Do **not** deploy to production or use with real health data
-> without a full security audit, HIPAA/DISHA compliance review, and proper
-> infrastructure hardening.
 
 ---
 
