@@ -77,9 +77,9 @@ jobs:
           echo "[*] Executing database migrations..."
           docker compose run --rm migrate
 
-          # Wait for Keycloak health endpoint
+          # Wait for Keycloak readiness (realm import + health on main HTTP port)
           echo "[*] Waiting for Keycloak readiness..."
-          timeout 120 bash -c 'until curl -s -f http://localhost:8081/health/ready; do sleep 3; done'
+          timeout 180 bash -c 'until curl -sf http://localhost:8081/health/ready >/dev/null && curl -sf http://localhost:8081/realms/sentinelhealth >/dev/null; do sleep 3; done'
 
           # Start API, Celery Worker, Frontend, and Nginx
           echo "[*] Starting API, non-eager Celery worker, Frontend, and Nginx..."
