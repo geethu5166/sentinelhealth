@@ -8,9 +8,9 @@ from sqlalchemy.orm import selectinload
 
 from app.auth.dependencies import get_current_user
 from app.db.session import get_db
-from app.models.alert import Alert, AlertSeverity, AlertStatus
+from app.models.alert import Alert, AlertEvidence, AlertSeverity, AlertStatus
 from app.models.playbook import PreventiveTask, TaskStatus
-from app.models.signal import DataSource
+from app.models.signal import DataLabel, DataSource, SignalRecord
 from app.schemas.auth import UserInfo
 from app.schemas.overview import (
     ActiveEpisode,
@@ -20,6 +20,42 @@ from app.schemas.overview import (
 )
 
 router = APIRouter(prefix="/overview", tags=["overview"])
+
+
+async def _resolve_data_mode(db: AsyncSession, tenant_id) -> str:
+    """Derive overview provenance from actual stored signal/evidence labels."""
+    signal_labels = (
+        await db.execute(
+            select(SignalRecord.data_label)
+            .where(SignalRecord.tenant_id == tenant_id)
+            .distinct()
+        )
+    ).scalars().all()
+
+    evidence_labels = (
+        await db.execute(
+            select(AlertEvidence.data_label)
+            .join(Alert, AlertEvidence.alert_id == Alert.id)
+            .where(Alert.tenant_id == tenant_id, AlertEvidence.data_label.is_not(None))
+            .distinct()
+        )
+    ).scalars().all()
+
+    labels: set[str] = set()
+    for label in signal_labels:
+        labels.add(label.value if hasattr(label, "value") else str(label))
+    for label in evidence_labels:
+        labels.add(str(label))
+
+    if not labels:
+        return "awaiting_feeds"
+    if labels == {DataLabel.SYNTHETIC.value} or labels == {"synthetic"}:
+        return "synthetic_demonstration"
+    if DataLabel.SYNTHETIC.value in labels or "synthetic" in labels:
+        return "mixed_synthetic_and_observed"
+    if labels & {DataLabel.OBSERVED.value, DataLabel.REAL.value, "observed", "real"}:
+        return "realtime_screening"
+    return "modelled_screening"
 
 
 @router.get("", response_model=OverviewResponse)
@@ -97,6 +133,8 @@ async def get_overview(
             )
         )
 
+    data_mode = await _resolve_data_mode(db, tenant_id)
+
     return OverviewResponse(
         active_alert_count=len(alerts),
         severity_breakdown=severity_breakdown,
@@ -106,6 +144,5 @@ async def get_overview(
         last_update_at=datetime.now(timezone.utc),
         active_episodes=active_episodes,
         sources=source_health_list,
-        data_mode="realtime_screening",
+        data_mode=data_mode,
     )
-

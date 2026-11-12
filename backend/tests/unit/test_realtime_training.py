@@ -59,6 +59,32 @@ async def test_train_realtime_heat_baselines_report():
     assert report.selected_model
     assert report.evidence_label == "screening"
     assert "Open-Meteo" in report.provenance
+    assert report.expected_value > 0
+    assert report.standard_error > 0
     payload_dict = report_to_dict(report)
     assert payload_dict["metric_code"] == "heat_index_daily_max"
     assert "candidate_models" in payload_dict
+
+
+def test_leakage_free_residuals_use_per_day_baselines():
+    from app.analytics.training.realtime import _leakage_free_residuals
+
+    start = datetime(2026, 5, 1, tzinfo=timezone.utc)
+    rows = []
+    for d in range(40):
+        t = start + timedelta(days=d)
+        # Strong weekday effect — a single tomorrow baseline would mis-score history
+        val = 30.0 + (8.0 if t.weekday() >= 5 else 0.0) + (d % 3) * 0.2
+        rows.append({"timestamp": t, "value": float(val), "exposure": 1.0})
+    series = __import__("pandas").DataFrame(rows)
+
+    prior, latest_r, expected, se = _leakage_free_residuals(
+        series,
+        selected_model_type="seasonal_ema",
+        history_days=14,
+    )
+    assert len(prior) >= 5
+    assert se >= 0.1
+    assert expected > 0
+    # Residuals should remain modest when using weekday-aware per-day baselines
+    assert abs(latest_r) < 5.0

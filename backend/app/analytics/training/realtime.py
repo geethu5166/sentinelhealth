@@ -113,6 +113,77 @@ async def fetch_open_meteo_hourly(
     return daily
 
 
+def _as_utc(ts) -> datetime:
+    value = ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else ts
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _leakage_free_residuals(
+    series: pd.DataFrame,
+    selected_model_type: str,
+    history_days: int = 21,
+) -> tuple[List[float], float, float, float]:
+    """
+    Build standardised residuals with a date-specific, leakage-free baseline per day.
+
+    For each scored day t, fit only on rows with timestamp < t so weekday/trend structure
+    is not compared against a single tomorrow forecast.
+    """
+    from app.analytics.baselines.ensemble import SeasonalMovingAverageBaseline
+    from app.analytics.baselines.models import (
+        NegativeBinomialBaseline,
+        PoissonCountBaseline,
+        QuasiPoissonBaseline,
+        RecentHistoryBaseline,
+    )
+
+    model_map = {
+        "recent_history": RecentHistoryBaseline(lookback_days=28, weekday_matching=True),
+        "recent_history_weekday_matched": RecentHistoryBaseline(lookback_days=28, weekday_matching=True),
+        "poisson_glm": PoissonCountBaseline(min_samples=14),
+        "negative_binomial_glm": NegativeBinomialBaseline(min_samples=21),
+        "quasi_poisson_glm": QuasiPoissonBaseline(min_samples=21),
+        "seasonal_ema": SeasonalMovingAverageBaseline(span=14, min_samples=14),
+    }
+    model = model_map.get(selected_model_type) or RecentHistoryBaseline(lookback_days=28, weekday_matching=True)
+
+    scored = series.tail(history_days + 1)
+    residuals: List[float] = []
+    latest_obs = float(series.iloc[-1]["value"])
+    latest_expected = latest_obs
+    latest_se = 1.0
+
+    for _, row in scored.iterrows():
+        day = _as_utc(row["timestamp"])
+        hist = series[series["timestamp"] < day]
+        if len(hist) < 7:
+            continue
+        # Pass exposure positionally — RecentHistoryBaseline uses `exposure`,
+        # while GLM / seasonal baselines use `current_exposure`.
+        pred = model.fit_predict(hist, day, 1.0)
+        se = max(0.1, float(pred.standard_error))
+        obs = float(row["value"])
+        residual = (obs - float(pred.expected_value)) / se
+        residuals.append(residual)
+        latest_obs = obs
+        latest_expected = float(pred.expected_value)
+        latest_se = se
+
+    if not residuals:
+        # Cold start: fall back to z-score against trailing mean
+        values = series["value"].astype(float).tail(history_days)
+        mean = float(values.mean()) if len(values) else latest_obs
+        se = max(0.1, float(values.std(ddof=1)) if len(values) > 1 else 1.0)
+        residuals = [0.0]
+        latest_expected = mean
+        latest_se = se
+
+    prior = residuals[:-1]
+    return prior, residuals[-1], latest_expected, latest_se
+
+
 async def train_realtime_heat_baselines(
     latitude: float = 21.1458,
     longitude: float = 79.0882,
@@ -120,23 +191,18 @@ async def train_realtime_heat_baselines(
 ) -> RealtimeTrainReport:
     """Fetch live Open-Meteo history and train an ensemble screening baseline."""
     series = await fetch_open_meteo_hourly(latitude, longitude, lookback_days=lookback_days)
-    target = series["timestamp"].max().to_pydatetime()
-    if target.tzinfo is None:
-        target = target.replace(tzinfo=timezone.utc)
+    target = _as_utc(series["timestamp"].max())
 
     selector = EnsembleBaselineSelector(holdout_days=7)
+    # Select model for the next day using full history up to the latest completed day.
     result: EnsembleResult = selector.fit_predict(series, target + timedelta(days=1), current_exposure=1.0)
 
-    # Score the latest day residual with EWMA + CUSUM for dual-detector confirmation
-    hist = series.iloc[:-1] if len(series) > 1 else series
+    prior_residuals, latest_residual, expected, se = _leakage_free_residuals(
+        series,
+        selected_model_type=result.selected.model_type,
+        history_days=21,
+    )
     latest_obs = float(series.iloc[-1]["value"])
-    expected = float(result.selected.expected_value)
-    se = max(0.1, float(result.selected.standard_error))
-    residual = (latest_obs - expected) / se
-
-    prior_residuals: List[float] = []
-    for _, row in hist.tail(21).iterrows():
-        prior_residuals.append((float(row["value"]) - expected) / se)
 
     ewma = OneSidedEWMADetector(smoothing_factor=0.25, control_limit_sigma=2.5)
     ewma_score = ewma.compute_anomaly(
@@ -149,7 +215,7 @@ async def train_realtime_heat_baselines(
     cusum = OneSidedCUSUMDetector(slack_k=0.5, decision_interval_h=4.0)
     for r in prior_residuals:
         cusum.update(r)
-    cusum_score = cusum.update(residual)
+    cusum_score = cusum.update(latest_residual)
 
     return RealtimeTrainReport(
         latitude=latitude,
@@ -158,8 +224,8 @@ async def train_realtime_heat_baselines(
         sample_size=int(len(series)),
         trained_at=datetime.now(timezone.utc).isoformat(),
         selected_model=result.selected.model_type,
-        expected_value=float(result.selected.expected_value),
-        standard_error=float(result.selected.standard_error),
+        expected_value=float(expected),
+        standard_error=float(se),
         selection_metric=result.selection_metric,
         selection_score=float(result.selection_score),
         ewma_anomaly=bool(ewma_score.is_anomaly),

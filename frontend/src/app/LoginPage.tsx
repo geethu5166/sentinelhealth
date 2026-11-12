@@ -113,6 +113,7 @@ export const LoginPage: React.FC = () => {
                   <li key={operator.email}>
                     <button
                       type="button"
+                      data-testid={`operator-login-${operator.role}`}
                       aria-label={`${operator.name}, ${operator.title}`}
                       disabled={!!pendingEmail}
                       onClick={() => handleOperatorLogin(operator.role, operator.email)}

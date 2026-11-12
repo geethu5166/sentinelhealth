@@ -29,21 +29,22 @@ TENANT_2_PASS = os.environ.get("SENTINEL_TEST_PASS_2", "demo123")
 
 
 def _login_demo_or_keycloak(page: Page, email: str, password: str, role_label: str) -> None:
-    """Authenticate via demo identity picker, falling back to Keycloak form login."""
-    page.goto(f"{FRONTEND_URL}/login")
-    page.wait_for_load_state("networkidle")
-
-    # Prefer accessible button name (includes role title); fall back to visible name text.
-    demo_btn = page.get_by_role("button", name=re.compile(re.escape(role_label), re.I))
-    if demo_btn.count() == 0:
-        demo_btn = page.get_by_text(role_label, exact=False)
-    if demo_btn.count() > 0 and demo_btn.first.is_visible():
-        demo_btn.first.click()
+    """Authenticate via operator identity picker, falling back to Keycloak form login."""
+    page.goto(f"{FRONTEND_URL}/login", wait_until="domcontentloaded")
+    # Vite/nginx may still be hydrating after compose-up; wait for the picker explicitly.
+    role_pattern = re.compile(re.escape(role_label), re.I)
+    operator_btn = page.get_by_role("button", name=role_pattern)
+    try:
+        expect(operator_btn.first).to_be_visible(timeout=45000)
+        operator_btn.first.click()
         page.wait_for_url("**/overview", timeout=20000)
         return
+    except Exception:
+        # Fall through to Keycloak if the SPA picker never hydrated.
+        pass
 
     # Keycloak Authorization Code flow
-    page.goto(f"{FRONTEND_URL}/")
+    page.goto(f"{FRONTEND_URL}/", wait_until="domcontentloaded")
     page.wait_for_load_state("networkidle")
     if "realms/sentinelhealth" in page.url or page.locator("#kc-login").is_visible():
         page.fill("#username", email)
@@ -52,7 +53,7 @@ def _login_demo_or_keycloak(page: Page, email: str, password: str, role_label: s
         page.wait_for_url(f"{FRONTEND_URL}/**", timeout=20000)
         return
 
-    raise AssertionError(f"Neither demo picker nor Keycloak login available for {email}")
+    raise AssertionError(f"Neither operator picker nor Keycloak login available for {email}")
 
 
 def test_live_browser_acceptance_workflow():
