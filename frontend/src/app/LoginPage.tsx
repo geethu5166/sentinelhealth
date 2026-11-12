@@ -106,34 +106,35 @@ export const LoginPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="space-y-2" role="list">
+            <ul className="space-y-2">
               {DEMO_ROLES.map((demo) => {
                 const busy = pendingEmail === demo.email;
                 return (
-                  <button
-                    key={demo.email}
-                    type="button"
-                    role="listitem"
-                    disabled={!!pendingEmail}
-                    onClick={() => handleDemoLogin(demo.role, demo.email)}
-                    className={cn(
-                      "group flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card px-3.5 py-3 text-left transition-all",
-                      "hover:border-primary/40 hover:bg-secondary/70 hover:shadow-sm",
-                      "disabled:cursor-wait disabled:opacity-70"
-                    )}
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">{demo.name}</p>
-                      <p className="truncate text-[11px] text-muted-foreground">{demo.title}</p>
-                      <p className="mt-0.5 truncate text-[10px] text-muted-foreground/80">{demo.focus}</p>
-                    </div>
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-transform group-hover:translate-x-0.5">
-                      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-                    </span>
-                  </button>
+                  <li key={demo.email}>
+                    <button
+                      type="button"
+                      aria-label={`${demo.name}, ${demo.title}`}
+                      disabled={!!pendingEmail}
+                      onClick={() => handleDemoLogin(demo.role, demo.email)}
+                      className={cn(
+                        "group flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card px-3.5 py-3 text-left transition-all",
+                        "hover:border-primary/40 hover:bg-secondary/70 hover:shadow-sm",
+                        "disabled:cursor-wait disabled:opacity-70"
+                      )}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">{demo.name}</p>
+                        <p className="truncate text-[11px] text-muted-foreground">{demo.title}</p>
+                        <p className="mt-0.5 truncate text-[10px] text-muted-foreground/80">{demo.focus}</p>
+                      </div>
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-transform group-hover:translate-x-0.5">
+                        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                      </span>
+                    </button>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
 
             {error ? (
               <p role="alert" className="mt-3 text-xs text-destructive">

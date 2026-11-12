@@ -10,6 +10,7 @@ Exercises the multi-tenant operational workflow against the live compose stack:
 from __future__ import annotations
 
 import os
+import re
 import time
 import uuid
 
@@ -32,7 +33,10 @@ def _login_demo_or_keycloak(page: Page, email: str, password: str, role_label: s
     page.goto(f"{FRONTEND_URL}/login")
     page.wait_for_load_state("networkidle")
 
-    demo_btn = page.get_by_role("button", name=role_label)
+    # Prefer accessible button name (includes role title); fall back to visible name text.
+    demo_btn = page.get_by_role("button", name=re.compile(re.escape(role_label), re.I))
+    if demo_btn.count() == 0:
+        demo_btn = page.get_by_text(role_label, exact=False)
     if demo_btn.count() > 0 and demo_btn.first.is_visible():
         demo_btn.first.click()
         page.wait_for_url("**/overview", timeout=20000)
