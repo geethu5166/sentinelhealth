@@ -11,7 +11,6 @@ from typing import Optional
 from sqlalchemy import (
     Boolean,
     DateTime,
-    Enum,
     ForeignKey,
     Index,
     Numeric,
@@ -22,7 +21,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDMixin
+from app.db.base import Base, TimestampMixin, UUIDMixin, pg_enum
 
 __all__ = [
     "ReplayStatus",
@@ -113,7 +112,7 @@ class ReplayRun(Base, UUIDMixin):
         index=True,
     )
     status: Mapped[ReplayStatus] = mapped_column(
-        Enum(ReplayStatus, name="replay_status_enum"),
+        pg_enum(ReplayStatus, "replay_status_enum"),
         default=ReplayStatus.PENDING,
         nullable=False,
         index=True,

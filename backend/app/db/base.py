@@ -2,12 +2,26 @@
 
 from __future__ import annotations
 
+import enum
 import uuid
 from datetime import datetime, timezone
+from typing import TypeVar
 
-from sqlalchemy import DateTime, func
+from sqlalchemy import DateTime, Enum, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+_E = TypeVar("_E", bound=enum.Enum)
+
+
+def pg_enum(enum_cls: type[_E], name: str, *, create_constraint: bool = False) -> Enum:
+    """PostgreSQL ENUM that persists enum *values* (not member names)."""
+    return Enum(
+        enum_cls,
+        name=name,
+        create_constraint=create_constraint,
+        values_callable=lambda members: [item.value for item in members],
+    )
 
 # SQLite compatibility for GeoAlchemy2 when running without SpatiaLite
 try:

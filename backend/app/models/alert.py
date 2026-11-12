@@ -9,7 +9,6 @@ from decimal import Decimal
 
 from sqlalchemy import (
     DateTime,
-    Enum,
     ForeignKey,
     Index,
     Numeric,
@@ -19,7 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDMixin
+from app.db.base import Base, TimestampMixin, UUIDMixin, pg_enum
 
 __all__ = [
     "Hazard",
@@ -82,16 +81,16 @@ class Alert(Base, UUIDMixin, TimestampMixin):
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
     hazard: Mapped[Hazard] = mapped_column(
-        Enum(Hazard, name="hazard_type", create_constraint=True), nullable=False
+        pg_enum(Hazard, "hazard_type", create_constraint=True), nullable=False
     )
     evidence_class: Mapped[EvidenceClass] = mapped_column(
-        Enum(EvidenceClass, name="evidence_class", create_constraint=True), nullable=False
+        pg_enum(EvidenceClass, "evidence_class", create_constraint=True), nullable=False
     )
     severity: Mapped[AlertSeverity] = mapped_column(
-        Enum(AlertSeverity, name="alert_severity", create_constraint=True), nullable=False
+        pg_enum(AlertSeverity, "alert_severity", create_constraint=True), nullable=False
     )
     status: Mapped[AlertStatus] = mapped_column(
-        Enum(AlertStatus, name="alert_status", create_constraint=True), nullable=False, default=AlertStatus.NEW
+        pg_enum(AlertStatus, "alert_status", create_constraint=True), nullable=False, default=AlertStatus.NEW
     )
     geography_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("geographies.id"), nullable=False

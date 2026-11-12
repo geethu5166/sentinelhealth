@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 from sqlalchemy import (
     Boolean,
     DateTime,
-    Enum,
     ForeignKey,
     Index,
     String,
@@ -19,7 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDMixin
+from app.db.base import Base, TimestampMixin, UUIDMixin, pg_enum
 
 __all__ = [
     "MembershipRole",
@@ -88,7 +87,7 @@ class Membership(Base, UUIDMixin):
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
     role: Mapped[MembershipRole] = mapped_column(
-        Enum(MembershipRole, name="membership_role", create_constraint=True),
+        pg_enum(MembershipRole, "membership_role", create_constraint=True),
         nullable=False,
     )
     scopes: Mapped[dict | None] = mapped_column(JSON, nullable=True)
