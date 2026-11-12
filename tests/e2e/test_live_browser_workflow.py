@@ -126,12 +126,11 @@ def test_live_browser_acceptance_workflow():
         review_link.first.click()
         page.wait_for_url("**/alerts/**", timeout=15000)
         page.wait_for_load_state("networkidle")
-        expect(
+        evidence = page.get_by_role("heading", name=re.compile(r"Multi-signal corroboration", re.I)).or_(
             page.get_by_text("Evidence data points", exact=False)
-            .or_(page.get_by_text("Multi-signal corroboration", exact=False))
-            .or_(page.get_by_text("apparent temperature", exact=False))
-            .or_(page.get_by_text("Apparent temperature", exact=False))
-        ).to_be_visible(timeout=20000)
+        )
+        expect(evidence.first).to_be_visible(timeout=20000)
+        expect(page.get_by_text(re.compile(r"apparent temperature", re.I)).first).to_be_visible(timeout=10000)
         print("[+] Multi-signal evidence display verified.")
 
         print("[*] Step 5: Completing a preventive task when available...")
