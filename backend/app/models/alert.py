@@ -189,7 +189,7 @@ class AlertStateEvent(Base, UUIDMixin):
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
-    metadata_: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
+    event_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
