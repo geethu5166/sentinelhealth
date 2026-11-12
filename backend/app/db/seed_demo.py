@@ -22,7 +22,7 @@ os.environ.setdefault("SENTINEL_ENVIRONMENT", "local")
 os.environ["SENTINEL_DEMO_MODE"] = "true"
 
 from app.db.base import Base
-from app.db.session import async_session_factory, engine
+from app.db.session import async_session_factory, engine, set_tenant_context
 from app.models.alert import (
     Alert,
     AlertEvidence,
@@ -152,7 +152,9 @@ async def seed_demo():
             print(f"  + User: {ud['email']} -> {ud['tenant'].name} ({ud['role'].value})")
 
         # 3. Geographies
-        # Tenant A: District hierarchy
+        # RLS FORCE is enabled on geographies/workplaces/signals/alerts/tasks —
+        # SET LOCAL app.current_tenant_id before each tenant-scoped DML block.
+        await set_tenant_context(session, dha_tenant.id)
         res_g = await session.execute(select(Geography).where(Geography.code == "DIST-DHANPUR", Geography.tenant_id == dha_tenant.id))
         dhanpur_geo = res_g.scalar_one_or_none()
         if not dhanpur_geo:
@@ -168,7 +170,8 @@ async def seed_demo():
             session.add(dhanpur_geo)
             await session.flush()
 
-        # Tenant B: Industrial Zone Geography
+        # Tenant B: Industrial Zone Geography + workplaces
+        await set_tenant_context(session, gfi_tenant.id)
         res_gb = await session.execute(select(Geography).where(Geography.code == "ZONE-LAKSHMI", Geography.tenant_id == gfi_tenant.id))
         lakshmi_zone = res_gb.scalar_one_or_none()
         if not lakshmi_zone:
@@ -184,7 +187,6 @@ async def seed_demo():
             session.add(lakshmi_zone)
             await session.flush()
 
-        # 4. Workplaces (Only Tenant B owns industrial workplace sites)
         res_w = await session.execute(select(Workplace).where(Workplace.code == "SITE-STEEL-01", Workplace.tenant_id == gfi_tenant.id))
         steel_workplace = res_w.scalar_one_or_none()
         if not steel_workplace:
@@ -200,7 +202,6 @@ async def seed_demo():
             session.add(steel_workplace)
             await session.flush()
 
-        # Small workplace site for suppression demonstration
         res_w_small = await session.execute(select(Workplace).where(Workplace.code == "SITE-SUBSTATION-02", Workplace.tenant_id == gfi_tenant.id))
         small_workplace = res_w_small.scalar_one_or_none()
         if not small_workplace:
@@ -220,6 +221,7 @@ async def seed_demo():
 
         # 5. Data Sources (Cleanly isolated per tenant)
         # Tenant A: Environmental + District Clinical Hospital Network
+        await set_tenant_context(session, dha_tenant.id)
         dha_sources = {
             "ENV-REGIONAL-WEATHER": DataSource(
                 tenant_id=dha_tenant.id,
@@ -521,8 +523,13 @@ async def seed_demo():
                 )
             )
 
+        # Flush signals before alerts (migrator BYPASSRLS allows multi-tenant seed;
+        # when running as sentinel_app, call set_tenant_context per tenant block).
+        await session.flush()
+
         # 9. Create Active Demonstration Alerts (One per tenant)
         # Alert 1: Tenant A (District Public Health Warning)
+        await set_tenant_context(session, dha_tenant.id)
         res_al_a = await session.execute(select(Alert).where(Alert.tenant_id == dha_tenant.id))
         if not res_al_a.scalar_one_or_none():
             alert_a = Alert(
@@ -588,6 +595,7 @@ async def seed_demo():
             ])
 
         # Alert 2: Tenant B (Greenfield Industrial Heat Safety Escalation)
+        await set_tenant_context(session, gfi_tenant.id)
         res_al_b = await session.execute(select(Alert).where(Alert.tenant_id == gfi_tenant.id))
         if not res_al_b.scalar_one_or_none():
             alert_b = Alert(
