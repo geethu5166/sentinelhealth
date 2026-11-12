@@ -1,35 +1,35 @@
 import React from "react";
-import { Ban, CheckCircle2, FileSpreadsheet, Lock, Shield, UserCheck } from "lucide-react";
+import { Ban, Lock, UserCheck } from "lucide-react";
 import { useUser } from "../../auth/useUser";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { PageHeader } from "../../components/ui/page-header";
+import { humanizeKey } from "../../lib/utils";
 
 export const GovernancePage: React.FC = () => {
   const { user } = useUser();
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Governance, Roles & Privacy Policies</h2>
-        <p className="text-muted-foreground text-sm">
-          Authorisation boundaries, strict prohibited uses, small-cell disclosure controls, and export review audit.
-        </p>
-      </div>
+    <div className="mx-auto max-w-7xl animate-fade-in space-y-6">
+      <PageHeader
+        title="Governance & privacy"
+        description="Authorisation boundaries, prohibited uses, small-cell disclosure controls, and export review."
+      />
 
-      {/* Prohibited Uses Warning Card */}
-      <Card className="border-destructive/40 bg-destructive/5">
+      <Card className="border-destructive/40 bg-destructive/5 shadow-panel">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-bold text-destructive flex items-center gap-2">
-            <Ban className="h-4 w-4" /> Prohibited Operational & Employment Uses
+          <CardTitle className="flex items-center gap-2 text-sm font-bold text-destructive">
+            <Ban className="h-4 w-4" aria-hidden /> Prohibited operational & employment uses
           </CardTitle>
           <CardDescription className="text-xs">
             Mandatory policy condition for deploying SentinelHealth in population and workforce health settings.
           </CardDescription>
         </CardHeader>
-        <CardContent className="text-xs text-foreground/90 space-y-2">
+        <CardContent className="space-y-2 text-xs text-foreground/90">
           <p>
-            SentinelHealth early warnings are population-level statistical risk indicators. The platform <strong>MUST NEVER</strong> be used for:
+            SentinelHealth early warnings are population-level statistical risk indicators. The platform{" "}
+            <strong>must never</strong> be used for:
           </p>
-          <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+          <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
             <li>Employee productivity scoring, individual performance ranking, or appraisal weighting.</li>
             <li>Individual sickness monitoring, attendance surveillance, or automated disciplinary action.</li>
             <li>Determining clinical fitness for work or employment termination.</li>
@@ -39,52 +39,57 @@ export const GovernancePage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Current User Scope */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <Card className="shadow-panel">
           <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <UserCheck className="h-4 w-4 text-primary" /> Active Operator Credentials
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <UserCheck className="h-4 w-4 text-primary" aria-hidden /> Active operator credentials
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-xs">
             <div>
-              <span className="text-muted-foreground">Authenticated Identity:</span>
-              <p className="font-semibold text-sm mt-0.5">{user?.display_name} ({user?.email})</p>
+              <span className="text-muted-foreground">Authenticated identity</span>
+              <p className="mt-0.5 text-sm font-semibold">
+                {user?.display_name} ({user?.email})
+              </p>
             </div>
             <div>
-              <span className="text-muted-foreground">Active Role:</span>
-              <p className="font-mono uppercase font-bold text-primary mt-0.5">{user?.current_role?.replace(/_/g, " ")}</p>
+              <span className="text-muted-foreground">Active role</span>
+              <p className="mt-0.5 font-mono text-sm font-bold uppercase text-primary">
+                {humanizeKey(user?.current_role)}
+              </p>
             </div>
             <div>
-              <span className="text-muted-foreground">Tenant Isolation Scope:</span>
-              <p className="font-semibold mt-0.5">District Health Authority (PostgreSQL RLS Active)</p>
+              <span className="text-muted-foreground">Tenant isolation scope</span>
+              <p className="mt-0.5 font-semibold">
+                {user?.memberships?.[0]?.tenant_name || "District Health Authority"} (PostgreSQL RLS)
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="shadow-panel">
           <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Lock className="h-4 w-4 text-emerald-500" /> Disclosure Control Policies
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Lock className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden /> Disclosure controls
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-xs">
-            <div className="flex items-center justify-between py-1 border-b">
-              <span>Minimum Upstream Contributors</span>
-              <span className="font-bold font-mono">≥ 10 individuals</span>
+            <div className="flex items-center justify-between border-b py-1">
+              <span>Minimum upstream contributors</span>
+              <span className="font-mono font-bold">≥ 10 individuals</span>
             </div>
-            <div className="flex items-center justify-between py-1 border-b">
-              <span>Small-Cell Event Masking</span>
-              <span className="font-bold font-mono">1 – 4 counts suppressed</span>
+            <div className="flex items-center justify-between border-b py-1">
+              <span>Small-cell event masking</span>
+              <span className="font-mono font-bold">1 – 4 counts suppressed</span>
             </div>
-            <div className="flex items-center justify-between py-1 border-b">
-              <span>Complementary Marginal Suppression</span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">Enforced</span>
+            <div className="flex items-center justify-between border-b py-1">
+              <span>Complementary marginal suppression</span>
+              <span className="font-bold text-emerald-700 dark:text-emerald-400">Enforced</span>
             </div>
             <div className="flex items-center justify-between py-1">
-              <span>Export CSV Formula Sanitization</span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">Active (OWASP CSV Defenses)</span>
+              <span>Export CSV formula sanitization</span>
+              <span className="font-bold text-emerald-700 dark:text-emerald-400">Active</span>
             </div>
           </CardContent>
         </Card>
@@ -92,4 +97,3 @@ export const GovernancePage: React.FC = () => {
     </div>
   );
 };
-

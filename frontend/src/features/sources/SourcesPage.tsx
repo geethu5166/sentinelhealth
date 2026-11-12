@@ -1,127 +1,119 @@
-import React, { useEffect, useState } from "react";
-import { Database, RefreshCw, Server, ShieldCheck } from "lucide-react";
+import React from "react";
+import { Database, RefreshCw } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/api/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
-import { formatTimestamp } from "../../lib/utils";
+import { Skeleton } from "../../components/ui/skeleton";
+import { PageHeader } from "../../components/ui/page-header";
+import { EmptyState } from "../../components/ui/empty-state";
+import { ErrorState } from "../../components/ui/error-state";
+import { StatusDot } from "../../components/ui/status-dot";
+import { formatTimestamp, humanizeKey } from "../../lib/utils";
+
+interface SourceRow {
+  id: string;
+  code: string;
+  name: string;
+  signal_family: string;
+  source_type: string;
+  provider?: string;
+  expected_cadence_minutes?: number;
+  freshness_status?: string;
+  status?: string;
+  updated_at?: string;
+}
 
 export const SourcesPage: React.FC = () => {
-  const [sources, setSources] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetchSources = async () => {
-    try {
-      setIsLoading(true);
-      const data = await apiFetch<any[]>("/sources");
-      setSources(data);
-    } catch {
-      // Fallback display
-      setSources([
-        {
-          id: "1",
-          code: "ENV-WEATHER-CAMS",
-          name: "Regional Heat & Weather Feed",
-          signal_family: "environmental",
-          source_type: "connector",
-          provider: "Open-Meteo / IMD",
-          expected_cadence_minutes: 60,
-          freshness_status: "fresh",
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: "2",
-          code: "CLIN-EMERGENCY-HEAT",
-          name: "District Emergency Heat Contacts",
-          signal_family: "clinical_service",
-          source_type: "file_upload",
-          provider: "Dhanpur Health Network",
-          expected_cadence_minutes: 1440,
-          freshness_status: "fresh",
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: "3",
-          code: "WORK-ABSENCE-SITE",
-          name: "Workforce Sickness Absence Registry",
-          signal_family: "workforce",
-          source_type: "file_upload",
-          provider: "Consortium EHS Portal",
-          expected_cadence_minutes: 1440,
-          freshness_status: "fresh",
-          updated_at: new Date().toISOString(),
-        },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchSources();
-  }, []);
+  const { data: sources, isLoading, error, refetch, isFetching } = useQuery<SourceRow[]>({
+    queryKey: ["sources"],
+    queryFn: () => apiFetch<SourceRow[]>("/sources"),
+  });
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Signal Sources & Data Connectors</h2>
-          <p className="text-muted-foreground text-sm">
-            Inspect connector health, expected cadences, contract schemas, and ingestion error logs.
-          </p>
-        </div>
-        <button
-          onClick={fetchSources}
-          className="flex items-center gap-1.5 text-xs border rounded px-3 py-1.5 bg-background hover:bg-muted"
-        >
-          <RefreshCw className="h-3.5 w-3.5" /> Refresh Status
-        </button>
-      </div>
+    <div className="mx-auto max-w-7xl animate-fade-in space-y-6">
+      <PageHeader
+        title="Signal sources"
+        description="Connector health, expected cadences, and ingestion freshness for upstream feeds."
+        actions={
+          <Button size="sm" variant="outline" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        }
+      />
 
-      <Card>
+      <Card className="shadow-panel overflow-hidden">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Status</TableHead>
-                <TableHead>Source Code & Name</TableHead>
-                <TableHead>Family</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Provider</TableHead>
-                <TableHead>Expected Cadence</TableHead>
-                <TableHead>Last Transmission</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sources.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell>
-                    <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                      Active (Fresh)
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-semibold text-xs text-foreground">{s.name}</div>
-                    <div className="font-mono text-[10px] text-muted-foreground">{s.code}</div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-muted border">
-                      {s.signal_family}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-xs capitalize">{s.source_type.replace(/_/g, " ")}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{s.provider}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{s.expected_cadence_minutes} min</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {s.updated_at ? formatTimestamp(s.updated_at) : "Recently"}
-                  </TableCell>
-                </TableRow>
+          {isLoading ? (
+            <div className="space-y-3 p-6">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-10 w-full" />
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          ) : error ? (
+            <div className="p-4">
+              <ErrorState
+                title="Sources unavailable"
+                description="Could not load connector health from the API."
+                onRetry={() => refetch()}
+              />
+            </div>
+          ) : !sources || sources.length === 0 ? (
+            <EmptyState
+              icon={Database}
+              title="No sources registered"
+              description="Seed demo data or register connectors to populate this view."
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Family</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Provider</TableHead>
+                    <TableHead>Cadence</TableHead>
+                    <TableHead>Last transmission</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sources.map((s) => {
+                    const status = s.freshness_status || s.status || "unknown";
+                    return (
+                      <TableRow key={s.id}>
+                        <TableCell>
+                          <StatusDot status={status} pulse={status === "fresh" || status === "online"} />
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-xs font-semibold">{s.name}</div>
+                          <div className="font-mono text-[10px] text-muted-foreground">{s.code}</div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="rounded border bg-muted px-2 py-0.5 font-mono text-[10px] uppercase">
+                            {s.signal_family}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-xs capitalize">{humanizeKey(s.source_type)}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{s.provider || "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {s.expected_cadence_minutes != null ? `${s.expected_cadence_minutes} min` : "—"}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {s.updated_at ? formatTimestamp(s.updated_at) : "—"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 };
-

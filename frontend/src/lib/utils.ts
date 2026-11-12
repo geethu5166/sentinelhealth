@@ -19,14 +19,34 @@ export function formatTimestamp(iso: string, timezone: string = "Asia/Kolkata"):
   }
 }
 
-export function severityBadgeClass(severity: string): string {
-  const map: Record<string, string> = {
-    advisory: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-blue-300",
-    watch: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border-amber-300",
-    warning: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 border-orange-300",
-    critical: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 border-red-300",
-    emergency: "bg-red-200 text-red-950 dark:bg-red-950 dark:text-red-100 border-red-500 font-bold",
-  };
-  return map[severity] || "bg-gray-100 text-gray-800 border-gray-300";
+export function humanizeKey(value?: string | null): string {
+  if (!value) return "—";
+  return value.replace(/_/g, " ");
 }
 
+export function severityBadgeClass(severity: string): string {
+  const map: Record<string, string> = {
+    advisory:
+      "bg-[hsl(var(--severity-advisory)/0.12)] text-[hsl(var(--severity-advisory))] border-[hsl(var(--severity-advisory)/0.35)]",
+    watch:
+      "bg-[hsl(var(--severity-watch)/0.14)] text-[hsl(var(--severity-watch))] border-[hsl(var(--severity-watch)/0.4)]",
+    warning:
+      "bg-[hsl(var(--severity-warning)/0.14)] text-[hsl(var(--severity-warning))] border-[hsl(var(--severity-warning)/0.4)]",
+    critical:
+      "bg-[hsl(var(--severity-critical)/0.14)] text-[hsl(var(--severity-critical))] border-[hsl(var(--severity-critical)/0.45)]",
+    emergency:
+      "bg-[hsl(var(--severity-emergency)/0.18)] text-[hsl(var(--severity-emergency))] border-[hsl(var(--severity-emergency)/0.55)] font-bold",
+  };
+  return map[severity] || "bg-muted text-muted-foreground border-border";
+}
+
+export function severityAccentClass(severity: string): string {
+  const map: Record<string, string> = {
+    advisory: "border-l-[hsl(var(--severity-advisory))]",
+    watch: "border-l-[hsl(var(--severity-watch))]",
+    warning: "border-l-[hsl(var(--severity-warning))]",
+    critical: "border-l-[hsl(var(--severity-critical))]",
+    emergency: "border-l-[hsl(var(--severity-emergency))]",
+  };
+  return map[severity] || "border-l-border";
+}

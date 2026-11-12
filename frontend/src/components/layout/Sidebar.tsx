@@ -1,9 +1,8 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Activity,
   AlertTriangle,
-  BarChart3,
   CheckSquare,
   Database,
   History,
@@ -13,9 +12,10 @@ import {
   Settings,
   Shield,
   TrendingUp,
+  X,
 } from "lucide-react";
 import { useAuth } from "../../auth/AuthProvider";
-import { cn } from "../../lib/utils";
+import { cn, humanizeKey } from "../../lib/utils";
 
 const NAV_ITEMS = [
   { name: "Overview", href: "/overview", icon: LayoutDashboard },
@@ -30,66 +30,120 @@ const NAV_ITEMS = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+  open?: boolean;
+  onClose?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ open = false, onClose }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  return (
-    <aside className="w-64 border-r bg-card flex flex-col h-screen select-none">
-      <div className="p-4 border-b flex items-center gap-3">
-        <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-black tracking-wider">
-          SH
-        </div>
-        <div>
-          <h1 className="font-bold text-sm tracking-tight">SentinelHealth</h1>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Early Warning</p>
-        </div>
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
+
+  const nav = (
+    <>
+      <div className="flex items-center justify-between gap-3 border-b p-4">
+        <Link to="/overview" className="flex items-center gap-3 min-w-0" onClick={onClose}>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--brand-mark))] font-display text-sm font-bold tracking-wide text-primary-foreground shadow-sm">
+            SH
+          </div>
+          <div className="min-w-0">
+            <h1 className="truncate font-display text-sm font-semibold tracking-tight">SentinelHealth</h1>
+            <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Early Warning</p>
+          </div>
+        </Link>
+        {onClose ? (
+          <button
+            type="button"
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
+            onClick={onClose}
+            aria-label="Close navigation"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
       </div>
 
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+      <nav className="flex-1 space-y-1 overflow-y-auto p-3" aria-label="Primary">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.href || (item.href !== "/overview" && location.pathname.startsWith(item.href));
+          const isActive =
+            location.pathname === item.href ||
+            (item.href !== "/overview" && location.pathname.startsWith(item.href));
           return (
             <Link
               key={item.href}
               to={item.href}
+              onClick={onClose}
               className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 isActive
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
+              aria-current={isActive ? "page" : undefined}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-4 w-4 shrink-0" aria-hidden />
               <span>{item.name}</span>
             </Link>
           );
         })}
       </nav>
 
-      <div className="p-3 border-t bg-muted/40">
-        <div className="flex items-center justify-between mb-2">
-          <div className="truncate pr-2">
-            <p className="text-xs font-semibold truncate">{user?.display_name || user?.email || "Demo User"}</p>
-            <p className="text-[10px] text-muted-foreground truncate capitalize">
-              {user?.current_role?.replace(/_/g, " ") || "Analyst"}
+      <div className="border-t bg-muted/40 p-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="min-w-0 truncate pr-1">
+            <p className="truncate text-xs font-semibold">{user?.display_name || user?.email || "Demo User"}</p>
+            <p className="truncate text-[10px] capitalize text-muted-foreground">
+              {humanizeKey(user?.current_role) || "Analyst"}
             </p>
           </div>
           <button
-            onClick={logout}
-            className="text-muted-foreground hover:text-destructive p-1 rounded"
+            type="button"
+            onClick={handleLogout}
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-background hover:text-destructive"
+            aria-label="Sign out"
             title="Sign out"
           >
             <LogOut className="h-4 w-4" />
           </button>
         </div>
-        <div className="text-[10px] text-muted-foreground flex items-center justify-between pt-1 border-t border-border/50">
-          <span>Asia/Kolkata (UTC+5:30)</span>
+        <div className="flex items-center justify-between border-t border-border/50 pt-1 text-[10px] text-muted-foreground">
+          <span>Asia/Kolkata</span>
           <span className="font-mono">v0.1.0</span>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      <aside className="hidden h-screen w-64 shrink-0 select-none flex-col border-r bg-card/95 backdrop-blur lg:flex">
+        {nav}
+      </aside>
+
+      <div
+        className={cn(
+          "fixed inset-0 z-40 bg-foreground/40 backdrop-blur-[2px] transition-opacity lg:hidden",
+          open ? "opacity-100" : "pointer-events-none opacity-0"
+        )}
+        onClick={onClose}
+        aria-hidden={!open}
+      />
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex h-screen w-72 max-w-[85vw] select-none flex-col border-r bg-card shadow-panel transition-transform duration-200 lg:hidden",
+          open ? "translate-x-0" : "-translate-x-full"
+        )}
+        aria-hidden={!open}
+      >
+        {nav}
+      </aside>
+    </>
   );
 };
-

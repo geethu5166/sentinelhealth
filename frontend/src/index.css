@@ -4,44 +4,59 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
+    /* Clinical ops: deep teal + slate — not generic SaaS blue / purple */
+    --background: 168 28% 97%;
+    --foreground: 192 42% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 217 91% 60%;
-    --radius: 0.5rem;
+    --card-foreground: 192 42% 12%;
+    --primary: 177 48% 28%;
+    --primary-foreground: 168 40% 97%;
+    --secondary: 170 18% 93%;
+    --secondary-foreground: 192 35% 18%;
+    --muted: 170 16% 93%;
+    --muted-foreground: 192 12% 40%;
+    --accent: 170 22% 91%;
+    --accent-foreground: 192 35% 16%;
+    --destructive: 0 72% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 172 16% 86%;
+    --input: 172 16% 86%;
+    --ring: 177 48% 28%;
+    --radius: 0.55rem;
+    --surface-elevated: 0 0% 100%;
+    --brand-mark: 177 55% 22%;
+    --severity-advisory: 199 78% 42%;
+    --severity-watch: 38 92% 45%;
+    --severity-warning: 24 90% 48%;
+    --severity-critical: 0 78% 48%;
+    --severity-emergency: 0 72% 32%;
   }
 
   .dark {
-    --background: 224 71% 4%;
-    --foreground: 213 31% 91%;
-    --card: 224 71% 7%;
-    --card-foreground: 213 31% 91%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 222 47% 11%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 223 47% 11%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 223 47% 11%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 216 34% 17%;
-    --input: 216 34% 17%;
-    --ring: 217 91% 60%;
+    --background: 195 35% 7%;
+    --foreground: 168 20% 92%;
+    --card: 195 32% 10%;
+    --card-foreground: 168 20% 92%;
+    --primary: 174 42% 45%;
+    --primary-foreground: 195 40% 8%;
+    --secondary: 195 24% 14%;
+    --secondary-foreground: 168 20% 92%;
+    --muted: 195 22% 14%;
+    --muted-foreground: 175 12% 62%;
+    --accent: 195 22% 16%;
+    --accent-foreground: 168 20% 92%;
+    --destructive: 0 62% 42%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 195 20% 18%;
+    --input: 195 20% 18%;
+    --ring: 174 42% 45%;
+    --surface-elevated: 195 30% 12%;
+    --brand-mark: 174 42% 45%;
+    --severity-advisory: 199 78% 55%;
+    --severity-watch: 38 92% 55%;
+    --severity-warning: 24 90% 58%;
+    --severity-critical: 0 78% 58%;
+    --severity-emergency: 0 72% 48%;
   }
 }
 
@@ -49,9 +64,93 @@
   * {
     @apply border-border;
   }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+    font-feature-settings: "ss01" 1, "cv01" 1;
+    background-image:
+      radial-gradient(ellipse 90% 55% at 0% -10%, hsl(177 40% 80% / 0.35), transparent 55%),
+      radial-gradient(ellipse 70% 45% at 100% 0%, hsl(192 30% 85% / 0.3), transparent 50%),
+      linear-gradient(180deg, hsl(var(--background)), hsl(var(--background)));
+    min-height: 100vh;
+  }
+
+  .dark body {
+    background-image:
+      radial-gradient(ellipse 80% 50% at 0% -10%, hsl(174 40% 20% / 0.35), transparent 55%),
+      radial-gradient(ellipse 60% 40% at 100% 0%, hsl(195 35% 18% / 0.4), transparent 50%),
+      linear-gradient(180deg, hsl(var(--background)), hsl(var(--background)));
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  code, kbd, .font-mono {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 }
 
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .surface-grid {
+    background-image:
+      linear-gradient(to right, hsl(var(--border) / 0.45) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.45) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .login-atmosphere {
+    background:
+      radial-gradient(ellipse 70% 50% at 15% 20%, hsl(177 45% 35% / 0.35), transparent 55%),
+      radial-gradient(ellipse 55% 45% at 85% 15%, hsl(38 70% 50% / 0.18), transparent 50%),
+      radial-gradient(ellipse 60% 50% at 70% 85%, hsl(192 40% 30% / 0.25), transparent 55%),
+      linear-gradient(155deg, #0b2a2b 0%, #123f40 42%, #0f2f36 100%);
+  }
+
+  .animate-fade-up {
+    animation: fade-up 0.55s ease-out both;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.45s ease-out both;
+  }
+
+  .animate-soft-pulse {
+    animation: soft-pulse 2.4s ease-in-out infinite;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes soft-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}

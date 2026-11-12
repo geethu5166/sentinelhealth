@@ -14,8 +14,19 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://api:8000',
+        target: process.env.VITE_API_PROXY || 'http://127.0.0.1:8000',
         changeOrigin: true,
+      },
+    },
+  },
+  build: {
+    chunkSizeWarningLimit: 1600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          maplibre: ['maplibre-gl'],
+          charts: ['recharts'],
+        },
       },
     },
   },
