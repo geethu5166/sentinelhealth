@@ -188,7 +188,9 @@ class SignalRecord(Base, UUIDMixin):
     source_record_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     record_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     schema_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    signal_family: Mapped[str] = mapped_column(String(50), nullable=False)
+    signal_family: Mapped[SignalFamily] = mapped_column(
+        pg_enum(SignalFamily, "signal_family", create_constraint=True), nullable=False
+    )
     metric_code: Mapped[str] = mapped_column(String(100), nullable=False)
     value: Mapped[Decimal] = mapped_column(Numeric(20, 6), nullable=False)
     unit: Mapped[str] = mapped_column(String(50), nullable=False)

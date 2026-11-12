@@ -20,7 +20,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, UUIDMixin
+from app.db.base import Base, UUIDMixin, pg_enum
 
 __all__ = [
     "GeographyLevel",
@@ -52,7 +52,10 @@ class Geography(Base, UUIDMixin):
     )
     code: Mapped[str] = mapped_column(String(50), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    level: Mapped[str] = mapped_column(String(50), nullable=False)  # district, sub_district, ward, site
+    level: Mapped[GeographyLevel] = mapped_column(
+        pg_enum(GeographyLevel, "geography_level", create_constraint=True),
+        nullable=False,
+    )
     geometry: Mapped[str | None] = mapped_column(
         Geometry(geometry_type="MULTIPOLYGON", srid=4326, spatial_index=False), nullable=True
     )
