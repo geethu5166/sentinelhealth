@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import maplibregl, { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Info, Layers, MapPin } from "lucide-react";
@@ -28,26 +28,65 @@ const SEVERITY_COLORS = {
   none: "#94a3b8",
 } as const;
 
+/** Matches overview active-episode semantics (excludes resolved/dismissed). */
+const ACTIVE_ALERT_STATUSES = new Set([
+  "new",
+  "acknowledged",
+  "investigating",
+  "action_planned",
+  "monitoring",
+  "reopened",
+]);
+
+const SEVERITY_RANK = ["advisory", "watch", "warning", "critical", "emergency"];
+
+type SeverityInfo = { severity: string; hazard: string };
+
+function enrichDistricts(
+  base: GeoJSON.FeatureCollection,
+  severityByName: Map<string, SeverityInfo>
+): GeoJSON.FeatureCollection {
+  return {
+    ...base,
+    features: base.features.map((feature) => {
+      const name = String(feature.properties?.name || "");
+      const match = severityByName.get(name);
+      return {
+        ...feature,
+        properties: {
+          ...feature.properties,
+          severity: match?.severity || "none",
+          hazard: match?.hazard || null,
+        },
+      };
+    }),
+  };
+}
+
 export const MapPage: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const [geojson, setGeojson] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [mapReady, setMapReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedDistrict, setSelectedDistrict] = useState<GeoDistrict | null>(null);
-  const { data: alerts } = useAlerts({ status: "new" });
+  // Fetch all alerts; filter to active statuses client-side (API accepts a single status).
+  const { data: alerts } = useAlerts();
 
   const severityByName = useMemo(() => {
-    const map = new Map<string, { severity: string; hazard: string }>();
+    const map = new Map<string, SeverityInfo>();
     (alerts || []).forEach((alert) => {
-      if (!alert.geography_name) return;
+      if (!alert.geography_name || !ACTIVE_ALERT_STATUSES.has(alert.status)) return;
       const existing = map.get(alert.geography_name);
-      const rank = ["advisory", "watch", "warning", "critical", "emergency"];
-      if (!existing || rank.indexOf(alert.severity) > rank.indexOf(existing.severity)) {
+      if (!existing || SEVERITY_RANK.indexOf(alert.severity) > SEVERITY_RANK.indexOf(existing.severity)) {
         map.set(alert.geography_name, { severity: alert.severity, hazard: alert.hazard });
       }
     });
     return map;
   }, [alerts]);
+
+  const severityByNameRef = useRef(severityByName);
+  severityByNameRef.current = severityByName;
 
   useEffect(() => {
     let cancelled = false;
@@ -101,9 +140,10 @@ export const MapPage: React.FC = () => {
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
     map.on("load", () => {
+      // Enrich at source creation so early-arriving alerts are not lost.
       map.addSource("districts", {
         type: "geojson",
-        data: geojson,
+        data: enrichDistricts(geojson, severityByNameRef.current),
       });
 
       map.addLayer({
@@ -152,44 +192,36 @@ export const MapPage: React.FC = () => {
       map.on("mouseleave", "district-fill", () => {
         map.getCanvas().style.cursor = "";
       });
+
+      setMapReady(true);
     });
 
     mapRef.current = map;
     return () => {
+      setMapReady(false);
       map.remove();
       mapRef.current = null;
     };
   }, [geojson]);
 
-  useEffect(() => {
-    if (!geojson || !mapRef.current) return;
-    const enriched: GeoJSON.FeatureCollection = {
-      ...geojson,
-      features: geojson.features.map((feature) => {
-        const name = String(feature.properties?.name || "");
-        const match = severityByName.get(name);
-        return {
-          ...feature,
-          properties: {
-            ...feature.properties,
-            severity: match?.severity || "none",
-            hazard: match?.hazard || null,
-          },
-        };
-      }),
-    };
-
-    const source = mapRef.current.getSource("districts") as GeoJSONSource | undefined;
-    if (source) {
-      source.setData(enriched);
-    }
-
-    const selectedName = selectedDistrict?.name;
-    if (selectedName) {
+  const syncSelectedDistrict = useCallback(
+    (enriched: GeoJSON.FeatureCollection) => {
+      const selectedName = selectedDistrict?.name;
+      if (!selectedName) return;
       const props = enriched.features.find((f) => f.properties?.name === selectedName)?.properties;
       if (props) setSelectedDistrict(props as unknown as GeoDistrict);
-    }
-  }, [geojson, severityByName, selectedDistrict?.name]);
+    },
+    [selectedDistrict?.name]
+  );
+
+  useEffect(() => {
+    if (!geojson || !mapReady || !mapRef.current) return;
+    const source = mapRef.current.getSource("districts") as GeoJSONSource | undefined;
+    if (!source) return;
+    const enriched = enrichDistricts(geojson, severityByName);
+    source.setData(enriched);
+    syncSelectedDistrict(enriched);
+  }, [geojson, severityByName, mapReady, syncSelectedDistrict]);
 
   return (
     <div className="mx-auto max-w-7xl animate-fade-in space-y-6">
