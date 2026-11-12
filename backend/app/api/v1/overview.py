@@ -18,6 +18,7 @@ from app.schemas.overview import (
     SeverityCount,
     SourceHealth,
 )
+from app.services.freshness import classify_freshness
 
 router = APIRouter(prefix="/overview", tags=["overview"])
 
@@ -115,21 +116,37 @@ async def get_overview(
     )
     pending_tasks = task_res.scalar_one() or 0
 
-    # Data sources status
+    # Data sources status with true freshness from latest signal ingest
     src_res = await db.execute(select(DataSource).where(DataSource.tenant_id == tenant_id))
     sources = src_res.scalars().all()
 
+    latest_by_source = dict(
+        (
+            await db.execute(
+                select(SignalRecord.source_id, func.max(SignalRecord.ingested_at))
+                .where(SignalRecord.tenant_id == tenant_id)
+                .group_by(SignalRecord.source_id)
+            )
+        ).all()
+    )
+    latest_ingest = max(latest_by_source.values()) if latest_by_source else None
+
     source_health_list = []
+    online = 0
     for s in sources:
+        last_seen = latest_by_source.get(s.id) or s.updated_at
+        status, age = classify_freshness(last_seen, s.freshness_threshold_minutes)
+        if s.is_active and status == "fresh":
+            online += 1
         source_health_list.append(
             SourceHealth(
                 id=s.id,
                 name=s.name,
                 signal_family=s.signal_family.value,
-                status="fresh",
-                freshness_minutes=15,
-                threshold_minutes=s.freshness_threshold_minutes,
-                last_received_at=s.updated_at,
+                status=status,
+                freshness_minutes=age,
+                threshold_minutes=s.freshness_threshold_minutes or 180,
+                last_received_at=last_seen,
             )
         )
 
@@ -139,9 +156,9 @@ async def get_overview(
         active_alert_count=len(alerts),
         severity_breakdown=severity_breakdown,
         pending_task_count=pending_tasks,
-        sources_online_count=len([s for s in sources if s.is_active]),
+        sources_online_count=online,
         total_sources_count=len(sources),
-        last_update_at=datetime.now(timezone.utc),
+        last_update_at=latest_ingest or datetime.now(timezone.utc),
         active_episodes=active_episodes,
         sources=source_health_list,
         data_mode=data_mode,

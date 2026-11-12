@@ -1,75 +1,120 @@
 import React from "react";
-import { Bell, Sliders } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { Bell, Loader2, Radio, Sliders } from "lucide-react";
+import { useDetectors, useTrainRealtimeBaselines } from "../../lib/api/hooks";
+import { Button } from "../../components/ui/button";
 import { PageHeader } from "../../components/ui/page-header";
+import { Badge } from "../../components/ui/badge";
+import { formatTimestamp, humanizeKey } from "../../lib/utils";
 
 export const SettingsPage: React.FC = () => {
+  const detectors = useDetectors();
+  const train = useTrainRealtimeBaselines();
+
   return (
-    <div className="mx-auto max-w-7xl animate-fade-in space-y-6">
+    <div className="mx-auto max-w-5xl animate-fade-in space-y-10">
       <PageHeader
-        title="Settings & thresholds"
-        description="Authorised detection limits, versioned playbooks, and notification routing. Changes require dual control."
+        title="Detection & routing"
+        description="Active screening stack, thresholds, and notification routes. Threshold edits require dual control."
+        actions={
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={train.isPending}
+            onClick={() => train.mutate({ latitude: 21.1458, longitude: 79.0882, lookback_days: 60 })}
+          >
+            {train.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Radio className="mr-1.5 h-4 w-4" />}
+            Retrain live baselines
+          </Button>
+        }
       />
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <Card className="shadow-panel">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Sliders className="h-4 w-4 text-primary" aria-hidden /> Active surveillance thresholds
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Versioned in operator policy packs. Requires safety officer approval to change.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-xs">
-            <div className="flex items-center justify-between border-b py-1.5">
-              <span>Heat watch screening threshold</span>
-              <span className="font-mono font-bold">Apparent temp ≥ 40.0°C</span>
-            </div>
-            <div className="flex items-center justify-between border-b py-1.5">
-              <span>Air quality watch threshold</span>
-              <span className="font-mono font-bold">PM2.5 24h mean ≥ 35.5 µg/m³</span>
-            </div>
-            <div className="flex items-center justify-between border-b py-1.5">
-              <span>Standardised residual anomaly cutoff</span>
-              <span className="font-mono font-bold">Z-score &gt; +2.0σ</span>
-            </div>
-            <div className="flex items-center justify-between border-b py-1.5">
-              <span>One-sided EWMA smoothing (λ)</span>
-              <span className="font-mono font-bold">0.25 (L = 2.5σ)</span>
-            </div>
-            <div className="flex items-center justify-between py-1.5">
-              <span>One-sided CUSUM (k / h)</span>
-              <span className="font-mono font-bold">0.5 / 4.0</span>
-            </div>
-          </CardContent>
-        </Card>
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Sliders className="h-4 w-4 text-primary" />
+          <h2 className="font-display text-lg font-semibold">Surveillance thresholds</h2>
+        </div>
+        <dl className="divide-y border-y border-border/80 text-sm">
+          <div className="flex items-center justify-between gap-4 py-3">
+            <dt className="text-muted-foreground">Heat watch screening</dt>
+            <dd className="font-mono text-xs font-semibold">Apparent temp ≥ 40.0°C</dd>
+          </div>
+          <div className="flex items-center justify-between gap-4 py-3">
+            <dt className="text-muted-foreground">Air quality watch</dt>
+            <dd className="font-mono text-xs font-semibold">PM2.5 24h mean ≥ 35.5 µg/m³</dd>
+          </div>
+          <div className="flex items-center justify-between gap-4 py-3">
+            <dt className="text-muted-foreground">Residual anomaly cutoff</dt>
+            <dd className="font-mono text-xs font-semibold">Z &gt; +2.0σ</dd>
+          </div>
+          <div className="flex items-center justify-between gap-4 py-3">
+            <dt className="text-muted-foreground">EWMA (λ / L)</dt>
+            <dd className="font-mono text-xs font-semibold">0.25 / 2.5σ</dd>
+          </div>
+          <div className="flex items-center justify-between gap-4 py-3">
+            <dt className="text-muted-foreground">CUSUM (k / h)</dt>
+            <dd className="font-mono text-xs font-semibold">0.5 / 4.0</dd>
+          </div>
+        </dl>
+      </section>
 
-        <Card className="shadow-panel">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Bell className="h-4 w-4 text-primary" aria-hidden /> Notification routes
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Delivery channel routing for early warnings and overdue mitigation tasks.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-xs">
-            <div className="flex items-center justify-between border-b py-1.5">
-              <span>Workplace safety manager</span>
-              <span className="font-mono text-muted-foreground">In-app + Mailpit</span>
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Radio className="h-4 w-4 text-primary" />
+          <h2 className="font-display text-lg font-semibold">Active detector catalog</h2>
+        </div>
+        {detectors.isLoading ? (
+          <p className="text-xs text-muted-foreground">Loading detector catalog…</p>
+        ) : detectors.data ? (
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Source: {detectors.data.realtime_source} · evidence {detectors.data.evidence_label}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {detectors.data.baselines.map((b) => (
+                <Badge key={b} variant="outline" className="font-mono text-[10px]">
+                  {humanizeKey(b)}
+                </Badge>
+              ))}
             </div>
-            <div className="flex items-center justify-between border-b py-1.5">
-              <span>Occupational health analyst</span>
-              <span className="font-mono text-muted-foreground">In-app + Mailpit</span>
-            </div>
-            <div className="flex items-center justify-between py-1.5">
-              <span>Notification flapping cooldown</span>
-              <span className="font-mono font-bold">240 minutes</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            <ul className="space-y-2 text-xs text-muted-foreground">
+              {detectors.data.detectors.map((d) => (
+                <li key={d.name}>
+                  <span className="font-semibold text-foreground">{d.name}</span> — {d.role}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">Detector catalog unavailable.</p>
+        )}
+        {train.data ? (
+          <p className="text-[11px] text-muted-foreground">
+            Last train: {humanizeKey(train.data.selected_model)} · HI {train.data.expected_value.toFixed(1)}°C ·{" "}
+            {formatTimestamp(train.data.trained_at)}
+          </p>
+        ) : null}
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Bell className="h-4 w-4 text-primary" />
+          <h2 className="font-display text-lg font-semibold">Notification routes</h2>
+        </div>
+        <dl className="divide-y border-y border-border/80 text-sm">
+          <div className="flex items-center justify-between gap-4 py-3">
+            <dt className="text-muted-foreground">Workplace safety manager</dt>
+            <dd className="text-xs font-medium">In-app · SMTP</dd>
+          </div>
+          <div className="flex items-center justify-between gap-4 py-3">
+            <dt className="text-muted-foreground">Occupational health analyst</dt>
+            <dd className="text-xs font-medium">In-app · SMTP</dd>
+          </div>
+          <div className="flex items-center justify-between gap-4 py-3">
+            <dt className="text-muted-foreground">Flapping cooldown</dt>
+            <dd className="font-mono text-xs font-semibold">240 minutes</dd>
+          </div>
+        </dl>
+      </section>
     </div>
   );
 };

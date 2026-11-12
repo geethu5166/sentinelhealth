@@ -115,7 +115,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open = false, onClose }) => {
         </div>
         <div className="flex items-center justify-between border-t border-border/50 pt-1 text-[10px] text-muted-foreground">
           <span>Asia/Kolkata</span>
-          <span className="font-mono">v0.1.0</span>
+          <span className="font-mono">console</span>
         </div>
       </div>
     </>

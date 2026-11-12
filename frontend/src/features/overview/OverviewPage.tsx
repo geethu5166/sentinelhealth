@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, CheckSquare, Clock, Database, Loader2, Radio, ShieldAlert, Sparkles } from "lucide-react";
+import { AlertTriangle, CheckSquare, Clock, Database, Loader2, Radio, ShieldAlert } from "lucide-react";
 import { useDetectors, useOverview, useTrainRealtimeBaselines } from "../../lib/api/hooks";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
@@ -11,6 +11,23 @@ import { EmptyState } from "../../components/ui/empty-state";
 import { ErrorState } from "../../components/ui/error-state";
 import { StatusDot } from "../../components/ui/status-dot";
 import { formatTimestamp, humanizeKey, severityAccentClass, severityBadgeClass } from "../../lib/utils";
+
+function dataModeLabel(mode?: string) {
+  switch (mode) {
+    case "realtime_screening":
+      return "Realtime screening feeds";
+    case "synthetic_demonstration":
+      return "Seeded fixture data";
+    case "mixed_synthetic_and_observed":
+      return "Mixed fixture + observed";
+    case "modelled_screening":
+      return "Modelled screening feeds";
+    case "awaiting_feeds":
+      return "Awaiting feed registration";
+    default:
+      return mode || "Unknown provenance";
+  }
+}
 
 export const OverviewPage: React.FC = () => {
   const { data, isLoading, error, refetch } = useOverview();
@@ -53,18 +70,23 @@ export const OverviewPage: React.FC = () => {
         title="Surveillance overview"
         description="Realtime Open-Meteo training, ensemble baselines, and dual-detector residual monitoring for accountable prevention."
         actions={
-          <Button
-            size="sm"
-            onClick={() => train.mutate({ latitude: 21.1458, longitude: 79.0882, lookback_days: 60 })}
-            disabled={train.isPending}
-          >
-            {train.isPending ? (
-              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-            ) : (
-              <Radio className="mr-1.5 h-4 w-4" />
-            )}
-            {train.isPending ? "Training…" : "Train on live weather"}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className="text-[10px] font-medium">
+              {dataModeLabel(data.data_mode)}
+            </Badge>
+            <Button
+              size="sm"
+              onClick={() => train.mutate({ latitude: 21.1458, longitude: 79.0882, lookback_days: 60 })}
+              disabled={train.isPending}
+            >
+              {train.isPending ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              ) : (
+                <Radio className="mr-1.5 h-4 w-4" />
+              )}
+              {train.isPending ? "Training…" : "Train on live weather"}
+            </Button>
+          </div>
         }
       />
 
@@ -125,7 +147,7 @@ export const OverviewPage: React.FC = () => {
         <Card className="overflow-hidden border-primary/20 shadow-panel">
           <CardHeader className="bg-gradient-to-r from-primary/10 via-transparent to-transparent">
             <CardTitle className="flex items-center gap-2 text-sm">
-              <Sparkles className="h-4 w-4 text-primary" aria-hidden />
+              <Radio className="h-4 w-4 text-primary" aria-hidden />
               Realtime baseline training
             </CardTitle>
             <CardDescription className="text-xs">
