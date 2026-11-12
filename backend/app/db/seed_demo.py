@@ -88,27 +88,41 @@ async def seed_demo():
 
         # 2. Users and Memberships
         users_data = [
-            # Public Health Tenant Users
+            # Demo console identities (must match frontend LoginPage / demo tokens)
             {
                 "email": "analyst@demo.local",
-                "name": "Dr. Aisha Rao",
+                "name": "Dr. Ananya Sharma",
                 "role": MembershipRole.PUBLIC_HEALTH_ANALYST,
                 "sub": "demo-sub-analyst",
                 "tenant": dha_tenant,
             },
             {
                 "email": "privacy@demo.local",
-                "name": "Siddharth Verma",
+                "name": "Meera Iyer",
                 "role": MembershipRole.PRIVACY_OFFICER,
                 "sub": "demo-sub-privacy",
                 "tenant": dha_tenant,
             },
-            # Greenfield Occupational Health Users
             {
-                "email": "safety@greenfield.local",
+                "email": "safety@demo.local",
                 "name": "Vikram Patel",
                 "role": MembershipRole.WORKPLACE_SAFETY_MANAGER,
                 "sub": "demo-sub-safety",
+                "tenant": dha_tenant,
+            },
+            {
+                "email": "ohanalyst@demo.local",
+                "name": "Rajesh Kumar",
+                "role": MembershipRole.OCCUPATIONAL_HEALTH_ANALYST,
+                "sub": "demo-sub-ohanalyst",
+                "tenant": dha_tenant,
+            },
+            # Greenfield occupational health users (second tenant isolation demos)
+            {
+                "email": "safety@greenfield.local",
+                "name": "Vikram Patel (Greenfield)",
+                "role": MembershipRole.WORKPLACE_SAFETY_MANAGER,
+                "sub": "demo-sub-safety-gfi",
                 "tenant": gfi_tenant,
             },
             {

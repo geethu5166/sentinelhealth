@@ -93,9 +93,11 @@ jobs:
             exit 1
           fi
 
-          # Seed demo fixtures used by the browser acceptance workflow
+          # Seed demo fixtures as migrator (BYPASSRLS / DDL owner). App role is DML-only.
           echo "[*] Seeding demo surveillance fixtures..."
-          docker compose run --rm --no-deps api python -m app.db.seed_demo
+          docker compose run --rm --no-deps \
+            -e SENTINEL_DATABASE_URL="postgresql+asyncpg://sentinel_migrator:ephemeral_migrator_pass_2024@postgres:5432/sentinelhealth" \
+            api python -m app.db.seed_demo
 
           # Start API, Celery Worker, Frontend, and Nginx
           echo "[*] Starting API, non-eager Celery worker, Frontend, and Nginx..."
