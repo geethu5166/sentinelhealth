@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { UserInfo } from "../lib/api/types";
-import { ApiError, apiFetch, getApiToken, setApiToken } from "../lib/api/client";
+import { apiFetch, getApiToken, setApiToken } from "../lib/api/client";
 
 interface AuthContextType {
   user: UserInfo | null;
