@@ -38,8 +38,6 @@ services:
       SENTINEL_DATABASE_URL: postgresql+asyncpg://sentinel_migrator:sentinel_migrator_pass_2024@test-postgres:5432/sentinelhealth
       SENTINEL_MIGRATION_DATABASE_URL: postgresql+asyncpg://sentinel_migrator:sentinel_migrator_pass_2024@test-postgres:5432/sentinelhealth
       SENTINEL_ENVIRONMENT: local
-    volumes:
-      - ./backend:/app
     depends_on:
       test-postgres:
         condition: service_healthy
@@ -52,7 +50,7 @@ services:
     restart: "no"
     entrypoint: ["/bin/sh", "-c"]
     command: >
-      "pip install --no-cache-dir pytest pytest-asyncio asyncpg sqlalchemy > /dev/null 2>&1 || true;
+      "python -m pip install --no-cache-dir pytest pytest-asyncio >/dev/null 2>&1 || true;
        python -m pytest tests/postgres/ -v --tb=short"
     environment:
       SENTINEL_TEST_POSTGRES_APP_URL: postgresql+asyncpg://sentinel_app:sentinel_app_pass_2024@test-postgres:5432/sentinelhealth
@@ -62,6 +60,7 @@ services:
       PYTHONPATH: /app
     volumes:
       - ./backend:/app
+      - /app/.venv
     depends_on:
       test-migrate:
         condition: service_completed_successfully

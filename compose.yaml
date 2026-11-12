@@ -68,6 +68,7 @@ services:
       start_period: 30s
 
   # ── One-Shot Database Migration Service ──
+  # Uses the image filesystem (no source bind-mount) so /app/.venv stays intact.
   migrate:
     build:
       context: ./backend
@@ -76,8 +77,6 @@ services:
     restart: "no"
     command: alembic upgrade head
     env_file: .env
-    volumes:
-      - ./backend:/app
     depends_on:
       postgres:
         condition: service_healthy
@@ -93,6 +92,8 @@ services:
     env_file: .env
     volumes:
       - ./backend:/app
+      # Anonymous volume keeps the image virtualenv when bind-mounting source.
+      - /app/.venv
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -122,6 +123,7 @@ services:
     env_file: .env
     volumes:
       - ./backend:/app
+      - /app/.venv
     depends_on:
       postgres:
         condition: service_healthy
@@ -141,6 +143,7 @@ services:
     env_file: .env
     volumes:
       - ./backend:/app
+      - /app/.venv
     depends_on:
       redis:
         condition: service_healthy
