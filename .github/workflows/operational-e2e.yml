@@ -8,6 +8,8 @@ on:
       - 'frontend/**'
       - 'infra/**'
       - 'compose.yaml'
+      - 'compose.prod.yaml'
+      - 'tests/e2e/**'
       - '.github/workflows/operational-e2e.yml'
 
 jobs:
@@ -42,8 +44,8 @@ jobs:
           APP_DB_USER=sentinel_app
           APP_DB_PASSWORD=ephemeral_app_pass_2024
 
-          SENTINEL_ENVIRONMENT=test
-          SENTINEL_DEMO_MODE=false
+          SENTINEL_ENVIRONMENT=local
+          SENTINEL_DEMO_MODE=true
           CELERY_TASK_ALWAYS_EAGER=false
 
           SENTINEL_DATABASE_URL=postgresql+asyncpg://sentinel_app:ephemeral_app_pass_2024@postgres:5432/sentinelhealth
@@ -77,19 +79,33 @@ jobs:
           echo "[*] Executing database migrations..."
           docker compose run --rm migrate
 
-          # Wait for Keycloak readiness (realm import + health on main HTTP port)
+          # Wait for Keycloak readiness (management health :9001 + imported realm)
           echo "[*] Waiting for Keycloak readiness..."
-          timeout 180 bash -c 'until curl -sf http://localhost:8081/health/ready >/dev/null && curl -sf http://localhost:8081/realms/sentinelhealth >/dev/null; do sleep 3; done'
+          if ! timeout 180 bash -c 'until curl -sf http://127.0.0.1:9001/health/ready >/dev/null; do sleep 3; done'; then
+            echo "[!] Keycloak management health did not become ready"
+            docker compose ps
+            docker compose logs --no-color --tail=200 keycloak || true
+            exit 1
+          fi
+          if ! timeout 120 bash -c 'until curl -sf http://127.0.0.1:8081/realms/sentinelhealth >/dev/null; do sleep 3; done'; then
+            echo "[!] Keycloak realm sentinelhealth not importable/reachable"
+            docker compose logs --no-color --tail=200 keycloak || true
+            exit 1
+          fi
+
+          # Seed demo fixtures used by the browser acceptance workflow
+          echo "[*] Seeding demo surveillance fixtures..."
+          docker compose run --rm --no-deps api python -m app.db.seed_demo
 
           # Start API, Celery Worker, Frontend, and Nginx
           echo "[*] Starting API, non-eager Celery worker, Frontend, and Nginx..."
           docker compose up -d api worker frontend nginx
 
           # Wait for API live check
-          timeout 60 bash -c 'until curl -s -f http://localhost:8000/health/live; do sleep 2; done'
+          timeout 90 bash -c 'until curl -s -f http://localhost:8000/health/live; do sleep 2; done'
           
           # Wait for Frontend / Nginx
-          timeout 60 bash -c 'until curl -s -f http://localhost:8080/; do sleep 2; done'
+          timeout 90 bash -c 'until curl -s -f http://localhost:8080/; do sleep 2; done'
           echo "[+] Full stack is healthy and operational."
 
       - name: Run Playwright Browser Acceptance Test

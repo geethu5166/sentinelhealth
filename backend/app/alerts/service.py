@@ -189,6 +189,25 @@ class AlertService:
             event_metadata=metadata or {},
         )
         self.session.add(state_event)
+
+        # Append-only governance audit trail (in addition to alert state_events)
+        from app.audit.service import log_audit_event
+
+        await log_audit_event(
+            self.session,
+            action="alert.transition",
+            resource_type="alert",
+            resource_id=str(alert.id),
+            tenant_id=tenant_id,
+            actor_id=actor_id,
+            details={
+                "from_status": from_status_val,
+                "to_status": target_status.value,
+                "reason": reason,
+                "hazard": alert.hazard.value if hasattr(alert.hazard, "value") else str(alert.hazard),
+            },
+        )
+
         await self.session.commit()
         return alert
 

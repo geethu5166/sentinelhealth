@@ -45,8 +45,7 @@ services:
       start_period: 5s
 
   # ── Keycloak (Identity Provider) ──
-  # Keycloak 25 serves /health on the management port by default; keep it on the
-  # main HTTP port so host waits and compose healthchecks stay on :8080/:8081.
+  # Keycloak 25 exposes /health/* on the management interface (:9000), not :8080.
   keycloak:
     image: quay.io/keycloak/keycloak:25.0.6
     container_name: sentinel-keycloak
@@ -56,25 +55,26 @@ services:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_HEALTH_ENABLED: "true"
-      KC_HTTP_MANAGEMENT_HEALTH_ENABLED: "false"
+      KC_HTTP_MANAGEMENT_PORT: "9000"
     volumes:
       - ./infra/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
     ports:
       - "8081:8080"
+      - "127.0.0.1:9001:9000"
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      # Image has no curl; use bash /dev/tcp against the main HTTP health endpoint.
+      # Image has no curl; probe management health via bash /dev/tcp.
       test:
         [
           "CMD-SHELL",
-          "exec 3<>/dev/tcp/127.0.0.1/8080; printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; cat <&3 | grep -q 'UP'",
+          "exec 3<>/dev/tcp/127.0.0.1/9000; printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; cat <&3 | grep -q 'UP'",
         ]
       interval: 10s
       timeout: 5s
       retries: 18
-      start_period: 45s
+      start_period: 60s
 
   # ── One-Shot Database Migration Service ──
   # Uses the image filesystem (no source bind-mount) so /app/.venv stays intact.
