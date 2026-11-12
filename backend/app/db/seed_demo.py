@@ -54,9 +54,9 @@ from app.models.tenant import Membership, MembershipRole, Tenant, User
 
 async def seed_demo():
     print("[*] Starting SentinelHealth demonstration seeder...")
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Schema must already exist via Alembic (`alembic upgrade head`).
+    # Do not call Base.metadata.create_all here: the runtime app DB role
+    # (sentinel_app) is intentionally NOBYPASSRLS with USAGE-only on public.
 
     async with async_session_factory() as session:
         # 1. Tenants (Clean separation of public health vs occupational health)
