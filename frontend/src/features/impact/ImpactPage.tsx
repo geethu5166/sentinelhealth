@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Clock3, ListChecks, ShieldAlert } from "lucide-react";
 import { useAlerts, useOverview, useTasks } from "../../lib/api/hooks";
 import { PageHeader } from "../../components/ui/page-header";
-import { ErrorState } from "../../components/ui/error-state";
 import { Skeleton } from "../../components/ui/skeleton";
 import { formatTimestamp, humanizeKey } from "../../lib/utils";
 
@@ -29,20 +28,35 @@ export const ImpactPage: React.FC = () => {
     );
   }
 
-  if (overview.error) {
-    return (
-      <div className="mx-auto max-w-5xl">
-        <ErrorState title="Impact metrics unavailable" description="Could not load operational tallies." onRetry={() => overview.refetch()} />
-      </div>
-    );
-  }
+  const feedsUnavailable = Boolean(overview.error || tasks.error);
 
   return (
     <div className="mx-auto max-w-5xl animate-fade-in space-y-10">
       <PageHeader
         title="Operational impact"
         description="Live tallies from alerts and mitigation tasks. Causal health claims require prospective evaluation design."
+        actions={
+          feedsUnavailable ? (
+            <button
+              type="button"
+              className="text-xs font-semibold text-primary hover:underline"
+              onClick={() => {
+                overview.refetch();
+                tasks.refetch();
+                alerts.refetch();
+              }}
+            >
+              Retry feeds
+            </button>
+          ) : null
+        }
       />
+
+      {feedsUnavailable ? (
+        <p className="text-xs text-muted-foreground">
+          Analytics API unreachable — tallies show zero until overview/tasks feeds recover.
+        </p>
+      ) : null}
 
       <section className="grid grid-cols-1 gap-8 border-y border-border/80 py-8 sm:grid-cols-3">
         <div>
