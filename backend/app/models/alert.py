@@ -81,7 +81,7 @@ class Alert(Base, UUIDMixin, TimestampMixin):
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
     hazard: Mapped[Hazard] = mapped_column(
-        pg_enum(Hazard, "hazard_type", create_constraint=True), nullable=False
+        pg_enum(Hazard, "hazard", create_constraint=True), nullable=False
     )
     evidence_class: Mapped[EvidenceClass] = mapped_column(
         pg_enum(EvidenceClass, "evidence_class", create_constraint=True), nullable=False
