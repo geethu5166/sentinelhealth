@@ -105,30 +105,33 @@ def test_live_browser_acceptance_workflow():
         page.goto(f"{FRONTEND_URL}/alerts")
         page.wait_for_load_state("networkidle")
 
+        # Require a real table row action — filter option text "Heat illness" is always present.
+        review_link = page.get_by_role("link", name=re.compile(r"Review evidence", re.I))
         found_alert = False
         start_poll = time.time()
         while time.time() - start_poll < 45:
-            if (
-                page.get_by_text("heat illness", exact=False).first.is_visible()
-                or page.get_by_text("corroborated", exact=False).first.is_visible()
-            ):
-                found_alert = True
-                break
+            if review_link.count() > 0 and review_link.first.is_visible():
+                row = page.locator("table tbody tr").filter(has_text=re.compile(r"heat illness|corroborated", re.I))
+                if row.count() > 0:
+                    found_alert = True
+                    break
             page.reload()
             page.wait_for_load_state("networkidle")
             time.sleep(2)
 
-        assert found_alert, "Timeout waiting for heat illness / corroborated alert in UI"
+        assert found_alert, "Timeout waiting for heat illness / corroborated alert row with Review evidence link"
         print("[+] Alert detected in frontend alert list.")
 
         print("[*] Step 4: Opening alert detail evidence...")
-        page.get_by_text("Review evidence", exact=False).first.click()
+        review_link.first.click()
+        page.wait_for_url("**/alerts/**", timeout=15000)
         page.wait_for_load_state("networkidle")
         expect(
             page.get_by_text("Evidence data points", exact=False)
             .or_(page.get_by_text("Multi-signal corroboration", exact=False))
             .or_(page.get_by_text("apparent temperature", exact=False))
-        ).to_be_visible(timeout=15000)
+            .or_(page.get_by_text("Apparent temperature", exact=False))
+        ).to_be_visible(timeout=20000)
         print("[+] Multi-signal evidence display verified.")
 
         print("[*] Step 5: Completing a preventive task when available...")

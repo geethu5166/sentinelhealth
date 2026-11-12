@@ -43,7 +43,11 @@ export const AlertDetailPage: React.FC = () => {
       <div className="mx-auto max-w-xl">
         <ErrorState
           title="Alert not found"
-          description="This episode may have been removed or the API is unreachable."
+          description={
+            error instanceof Error
+              ? error.message
+              : "This episode may have been removed or the API is unreachable."
+          }
           onRetry={() => refetch()}
         />
         <div className="mt-4 text-center">

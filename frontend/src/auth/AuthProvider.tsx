@@ -117,9 +117,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const profile = await apiFetch<UserInfo>("/me");
       setUser(profile);
     } catch (err) {
-      // Demo tokens may run before the API is ready — restore known demo identity only.
+      // Demo tokens may run before the API is ready — keep the local demo identity and token.
       const demoUser = demoProfileFromToken(token);
-      if (demoUser && (!(err instanceof ApiError) || err.status >= 500 || err.status === 401 || err.status === 404)) {
+      if (demoUser) {
         setUser(demoUser);
       } else {
         setApiToken(null);
