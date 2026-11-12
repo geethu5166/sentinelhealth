@@ -8,7 +8,7 @@ export const SettingsPage: React.FC = () => {
     <div className="mx-auto max-w-7xl animate-fade-in space-y-6">
       <PageHeader
         title="Settings & thresholds"
-        description="Authorised detection limits, versioned playbooks, and notification routing. Read-only in this demo."
+        description="Authorised detection limits, versioned playbooks, and notification routing. Changes require dual control."
       />
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -18,7 +18,7 @@ export const SettingsPage: React.FC = () => {
               <Sliders className="h-4 w-4 text-primary" aria-hidden /> Active surveillance thresholds
             </CardTitle>
             <CardDescription className="text-xs">
-              Configured in config/demo-policies.yaml. Requires safety officer approval to change.
+              Versioned in operator policy packs. Requires safety officer approval to change.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-xs">
@@ -34,9 +34,13 @@ export const SettingsPage: React.FC = () => {
               <span>Standardised residual anomaly cutoff</span>
               <span className="font-mono font-bold">Z-score &gt; +2.0σ</span>
             </div>
-            <div className="flex items-center justify-between py-1.5">
+            <div className="flex items-center justify-between border-b py-1.5">
               <span>One-sided EWMA smoothing (λ)</span>
-              <span className="font-mono font-bold">0.30 (L = 2.5σ)</span>
+              <span className="font-mono font-bold">0.25 (L = 2.5σ)</span>
+            </div>
+            <div className="flex items-center justify-between py-1.5">
+              <span>One-sided CUSUM (k / h)</span>
+              <span className="font-mono font-bold">0.5 / 4.0</span>
             </div>
           </CardContent>
         </Card>

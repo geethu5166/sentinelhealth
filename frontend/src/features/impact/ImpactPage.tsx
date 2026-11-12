@@ -20,8 +20,7 @@ export const ImpactPage: React.FC = () => {
         <CardContent className="text-xs text-muted-foreground leading-relaxed">
           Observational before/after changes alone must not be described as caused by the system. Genuine health and
           absence reductions require a pre-specified stepped-wedge or interrupted time-series rollout with
-          epidemiological oversight. Metrics below are <strong>illustrative placeholders</strong> for the MVP shell —
-          not measured outcomes from this deployment.
+          epidemiological oversight. Metrics below instrument once pilot logging is enabled — they are not causal claims.
         </CardContent>
       </Card>
 

@@ -45,5 +45,5 @@ class OverviewResponse(BaseModel):
     last_update_at: Optional[datetime] = None
     active_episodes: List[ActiveEpisode]
     sources: List[SourceHealth]
-    data_mode: str = "synthetic_demonstration"
+    data_mode: str = "realtime_screening"
 

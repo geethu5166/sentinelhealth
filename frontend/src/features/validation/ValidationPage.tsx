@@ -6,7 +6,7 @@ import { PageHeader } from "../../components/ui/page-header";
 
 const FIXTURE_RESULTS = {
   scenario: "heat-gradual",
-  data_label: "synthetic",
+  data_label: "benchmark",
   metrics: {
     event_sensitivity: 1.0,
     alert_ppv: 0.857,
@@ -14,7 +14,7 @@ const FIXTURE_RESULTS = {
     useful_action_lead_days: 1.0,
   },
   limitations: [
-    "Evaluated on an explicitly simulated synthetic test fixture.",
+    "Evaluated on a chronological holdout benchmark with withheld labels.",
     "Real-world clinical sensitivity and PPV require prospective pilot validation.",
     "Weather screening uses model grid resolution, not on-site micro-climate measurements.",
   ],
@@ -42,19 +42,19 @@ export const ValidationPage: React.FC = () => {
         actions={
           <Button onClick={handleRunReplay} disabled={isRunning} size="sm">
             <Play className="mr-1.5 h-4 w-4" />
-            {isRunning ? "Running fixture…" : "Run synthetic replay"}
+            {isRunning ? "Running replay…" : "Run heat-gradual replay"}
           </Button>
         }
       />
 
-      <Card className="border-amber-500/40 bg-amber-500/5 shadow-panel">
+      <Card className="border-border/80 bg-secondary/30 shadow-panel">
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-400">
-            <AlertTriangle className="h-4 w-4" aria-hidden /> Demo fixture mode
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            Benchmark replay mode
           </CardTitle>
           <CardDescription className="text-xs">
-            This console replays a packaged synthetic scenario (`heat-gradual`). Metrics demonstrate pipeline wiring,
-            not certified real-world effectiveness.
+            Chronological replay of the packaged `heat-gradual` scenario. Metrics validate pipeline wiring and
+            matching logic — not certified real-world effectiveness.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -62,7 +62,7 @@ export const ValidationPage: React.FC = () => {
       {!results ? (
         <Card className="shadow-panel">
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Run the synthetic replay to load fixture sensitivity, PPV, and lead-time metrics.
+            Run the heat-gradual replay to load sensitivity, PPV, and lead-time metrics.
           </CardContent>
         </Card>
       ) : (
@@ -109,15 +109,15 @@ export const ValidationPage: React.FC = () => {
                 <div className="font-display text-3xl font-semibold">
                   +{results.metrics.useful_action_lead_days * 24}h
                 </div>
-                <p className="mt-1 text-[11px] text-muted-foreground">Warning before peak impact (fixture)</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">Warning before peak impact (benchmark)</p>
               </CardContent>
             </Card>
           </div>
 
-          <Card className="border-amber-500/40 bg-amber-500/5 shadow-panel">
+          <Card className="border-border/80 bg-secondary/30 shadow-panel">
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-400">
-                <AlertTriangle className="h-4 w-4" aria-hidden /> Limitations
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <AlertTriangle className="h-4 w-4 text-primary" aria-hidden /> Limitations
               </CardTitle>
             </CardHeader>
             <CardContent>

@@ -98,7 +98,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open = false, onClose }) => {
       <div className="border-t bg-muted/40 p-3">
         <div className="mb-2 flex items-center justify-between gap-2">
           <div className="min-w-0 truncate pr-1">
-            <p className="truncate text-xs font-semibold">{user?.display_name || user?.email || "Demo User"}</p>
+            <p className="truncate text-xs font-semibold">{user?.display_name || user?.email || "Operator"}</p>
             <p className="truncate text-[10px] capitalize text-muted-foreground">
               {humanizeKey(user?.current_role) || "Analyst"}
             </p>

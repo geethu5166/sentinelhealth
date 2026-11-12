@@ -27,6 +27,16 @@ celery_app.conf.update(
             "task": "app.workers.tasks.scheduled_surveillance_sweep",
             "schedule": 300.0,  # every 5 minutes
         },
+        "realtime-baseline-retrain": {
+            "task": "app.workers.tasks.train_realtime_baselines",
+            "schedule": 3600.0,  # hourly Open-Meteo ensemble refresh
+            "kwargs": {
+                "tenant_id": "system",
+                "latitude": 21.1458,
+                "longitude": 79.0882,
+                "lookback_days": 60,
+            },
+        },
     },
 )
 

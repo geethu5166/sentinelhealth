@@ -13,7 +13,7 @@ vi.mock("../src/auth/AuthProvider", () => ({
 }));
 
 describe("LoginPage", () => {
-  it("renders brand-forward demo identity picker", () => {
+  it("renders brand-forward operator access picker", () => {
     render(
       <BrowserRouter>
         <LoginPage />
@@ -22,6 +22,7 @@ describe("LoginPage", () => {
 
     expect(screen.getByText("SentinelHealth")).toBeDefined();
     expect(screen.getByText(/Vikram Patel/i)).toBeDefined();
-    expect(screen.getByText(/Demonstration prototype/i)).toBeDefined();
+    expect(screen.getByText(/Operator access/i)).toBeDefined();
+    expect(screen.getByText(/Screening decision support only/i)).toBeDefined();
   });
 });

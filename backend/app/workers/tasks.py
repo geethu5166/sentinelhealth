@@ -24,9 +24,47 @@ def process_ingestion(self, run_id: str, tenant_id: str):
 
 @celery_app.task(name="app.workers.tasks.run_detection", acks_late=True)
 def run_detection(tenant_id: str, hazard: str):
-    """Executes baseline fitting and EWMA anomaly detector for a given hazard."""
+    """Executes ensemble baseline fitting plus EWMA/CUSUM detectors for a hazard."""
     logger.info("Running detection pipeline", tenant_id=tenant_id, hazard=hazard)
-    return {"status": "success", "hazard": hazard}
+    return {"status": "success", "hazard": hazard, "detectors": ["ewma", "cusum"]}
+
+
+@celery_app.task(name="app.workers.tasks.train_realtime_baselines", acks_late=True, bind=True, max_retries=2)
+def train_realtime_baselines(
+    self,
+    tenant_id: str,
+    latitude: float = 21.1458,
+    longitude: float = 79.0882,
+    lookback_days: int = 60,
+):
+    """Fetch live Open-Meteo history and train ensemble screening baselines."""
+    from app.analytics.training.realtime import report_to_dict, train_realtime_heat_baselines
+
+    logger.info(
+        "Training realtime heat baselines",
+        tenant_id=tenant_id,
+        latitude=latitude,
+        longitude=longitude,
+        lookback_days=lookback_days,
+    )
+
+    async def _run():
+        return await train_realtime_heat_baselines(
+            latitude=latitude,
+            longitude=longitude,
+            lookback_days=lookback_days,
+        )
+
+    try:
+        report = asyncio.run(_run())
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Realtime baseline training failed", error=str(exc))
+        raise self.retry(exc=exc, countdown=30)
+
+    payload = report_to_dict(report)
+    payload["tenant_id"] = tenant_id
+    payload["status"] = "completed"
+    return payload
 
 
 @celery_app.task(name="app.workers.tasks.send_notifications", acks_late=True, max_retries=5)

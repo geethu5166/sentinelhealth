@@ -53,9 +53,11 @@ app.mount("/metrics", metrics_app)
 async def root():
     return {
         "service": "SentinelHealth Population and Workforce Health Early Warning",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "demo_mode": settings.DEMO_MODE,
-        "disclaimer": "PROTOTYPE: All data is synthetic. Not for clinical, individual diagnostic, or punitive use.",
+        "evidence_label": "screening",
+        "disclaimer": "Screening decision support only. Not a clinical diagnosis tool and not for individual medical or punitive use.",
         "docs": "/docs",
+        "analytics": "/api/v1/analytics/detectors",
     }
 

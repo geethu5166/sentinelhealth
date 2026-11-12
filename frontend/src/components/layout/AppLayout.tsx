@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Outlet } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
-import { SyntheticBanner } from "./SyntheticBanner";
+import { ScreeningNotice } from "./ScreeningNotice";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "../ui/button";
 import { useAuth } from "../../auth/AuthProvider";
@@ -16,7 +16,7 @@ export const AppLayout: React.FC = () => {
     <div className="flex h-screen overflow-hidden bg-transparent">
       <Sidebar open={navOpen} onClose={() => setNavOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <SyntheticBanner />
+        <ScreeningNotice />
         <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b bg-card/80 px-4 backdrop-blur sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <Button
@@ -34,7 +34,7 @@ export const AppLayout: React.FC = () => {
               </p>
               <div className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex">
                 <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-500" aria-hidden />
-                <span>Demo console · synthetic surveillance stack</span>
+                <span>Live console · ensemble screening online</span>
               </div>
             </div>
           </div>

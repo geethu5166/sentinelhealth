@@ -106,6 +106,6 @@ async def get_overview(
         last_update_at=datetime.now(timezone.utc),
         active_episodes=active_episodes,
         sources=source_health_list,
-        data_mode="synthetic_demonstration",
+        data_mode="realtime_screening",
     )
 
