@@ -20,7 +20,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDMixin
+from app.db.base import Base, UUIDMixin
 
 __all__ = [
     "GeographyLevel",
@@ -38,7 +38,9 @@ class GeographyLevel(str, enum.Enum):
     SITE = "site"
 
 
-class Geography(Base, UUIDMixin, TimestampMixin):
+class Geography(Base, UUIDMixin):
+    """Aligned to Alembic 001: created_at only (no updated_at)."""
+
     __tablename__ = "geographies"
     __table_args__ = (
         Index("ix_geography_tenant_code", "tenant_id", "code"),
@@ -62,6 +64,12 @@ class Geography(Base, UUIDMixin, TimestampMixin):
     properties: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        server_default=func.now(),
+        nullable=False,
+    )
 
     parent: Mapped[Geography | None] = relationship("Geography", remote_side="Geography.id", lazy="selectin")
     versions: Mapped[list[GeographyVersion]] = relationship("GeographyVersion", back_populates="geography")
@@ -88,7 +96,9 @@ class GeographyVersion(Base, UUIDMixin):
     geography: Mapped[Geography] = relationship("Geography", back_populates="versions")
 
 
-class Workplace(Base, UUIDMixin, TimestampMixin):
+class Workplace(Base, UUIDMixin):
+    """Aligned to Alembic 001: created_at only (no updated_at); site_type required."""
+
     __tablename__ = "workplaces"
     __table_args__ = (
         Index("ix_workplace_tenant_code", "tenant_id", "code"),
@@ -99,7 +109,7 @@ class Workplace(Base, UUIDMixin, TimestampMixin):
     )
     code: Mapped[str] = mapped_column(String(100), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    site_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    site_type: Mapped[str] = mapped_column(String(100), nullable=False)
     location: Mapped[str | None] = mapped_column(
         Geometry(geometry_type="POINT", srid=4326, spatial_index=False), nullable=True
     )
@@ -111,6 +121,12 @@ class Workplace(Base, UUIDMixin, TimestampMixin):
     worker_count_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
     properties: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        server_default=func.now(),
+        nullable=False,
+    )
 
     geography: Mapped[Geography | None] = relationship("Geography", back_populates="workplaces")
     geography_links: Mapped[list[WorkplaceGeographyLink]] = relationship(
@@ -130,7 +146,7 @@ class WorkplaceGeographyLink(Base, UUIDMixin):
     link_type: Mapped[str] = mapped_column(String(50), nullable=False)  # administrative, catchment, environmental_grid
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     mapping_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    valid_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    valid_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     valid_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     workplace: Mapped[Workplace] = relationship("Workplace", back_populates="geography_links")
