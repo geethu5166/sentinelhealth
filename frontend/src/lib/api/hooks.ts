@@ -107,3 +107,53 @@ export function useUpdateTask() {
   });
 }
 
+export interface RealtimeTrainReport {
+  status: string;
+  latitude: number;
+  longitude: number;
+  metric_code: string;
+  sample_size: number;
+  trained_at: string;
+  selected_model: string;
+  expected_value: number;
+  standard_error: number;
+  selection_metric: string;
+  selection_score: number;
+  ewma_anomaly: boolean;
+  cusum_anomaly: boolean;
+  latest_observed: number;
+  provenance: string;
+  evidence_label: string;
+  candidate_models?: Array<{
+    model_type: string;
+    expected_value: number;
+    standard_error: number;
+  }>;
+}
+
+export function useTrainRealtimeBaselines() {
+  return useMutation({
+    mutationFn: (params?: { latitude?: number; longitude?: number; lookback_days?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.latitude != null) qs.set("latitude", String(params.latitude));
+      if (params?.longitude != null) qs.set("longitude", String(params.longitude));
+      if (params?.lookback_days != null) qs.set("lookback_days", String(params.lookback_days));
+      const suffix = qs.toString() ? `?${qs.toString()}` : "";
+      return apiFetch<RealtimeTrainReport>(`/analytics/train/realtime${suffix}`, { method: "POST" });
+    },
+  });
+}
+
+export function useDetectors() {
+  return useQuery<{
+    evidence_label: string;
+    baselines: string[];
+    detectors: Array<{ name: string; role: string }>;
+    realtime_source: string;
+  }>({
+    queryKey: ["analytics-detectors"],
+    queryFn: () => apiFetch("/analytics/detectors"),
+    staleTime: 60_000,
+  });
+}
+

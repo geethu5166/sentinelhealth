@@ -3,15 +3,16 @@
 import uuid
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user, require_role
 from app.db.session import get_db
 from app.models.quality import QualitySnapshot
-from app.models.signal import DataSource, SignalFamily, SourceType
+from app.models.signal import DataSource, SignalFamily, SignalRecord, SourceType
 from app.schemas.auth import UserInfo
 from app.schemas.signal import DataSourceCreate, DataSourceRead
+from app.services.freshness import classify_freshness
 
 router = APIRouter(prefix="/sources", tags=["sources"])
 
@@ -25,26 +26,40 @@ async def list_sources(
     query = select(DataSource).where(DataSource.tenant_id == current_user.current_tenant_id)
     result = await db.execute(query)
     sources = result.scalars().all()
-    return [
-        DataSourceRead(
-            id=s.id,
-            tenant_id=s.tenant_id,
-            code=s.code,
-            name=s.name,
-            signal_family=s.signal_family.value,
-            source_type=s.source_type.value,
-            provider=s.provider,
-            schema_version=s.schema_version,
-            expected_cadence_minutes=s.expected_cadence_minutes,
-            freshness_threshold_minutes=s.freshness_threshold_minutes,
-            is_active=s.is_active,
-            configuration=s.configuration,
-            created_at=s.created_at,
-            updated_at=s.updated_at,
-            freshness_status="fresh",
+    latest_by_source = dict(
+        (
+            await db.execute(
+                select(SignalRecord.source_id, func.max(SignalRecord.ingested_at))
+                .where(SignalRecord.tenant_id == current_user.current_tenant_id)
+                .group_by(SignalRecord.source_id)
+            )
+        ).all()
+    )
+    payload = []
+    for s in sources:
+        last_seen = latest_by_source.get(s.id) or s.updated_at
+        freshness_status, _age = classify_freshness(last_seen, s.freshness_threshold_minutes)
+        payload.append(
+            DataSourceRead(
+                id=s.id,
+                tenant_id=s.tenant_id,
+                code=s.code,
+                name=s.name,
+                signal_family=s.signal_family.value,
+                source_type=s.source_type.value,
+                provider=s.provider,
+                schema_version=s.schema_version,
+                expected_cadence_minutes=s.expected_cadence_minutes,
+                freshness_threshold_minutes=s.freshness_threshold_minutes,
+                is_active=s.is_active,
+                configuration=s.configuration,
+                created_at=s.created_at,
+                updated_at=s.updated_at,
+                last_ingestion_at=last_seen,
+                freshness_status=freshness_status,
+            )
         )
-        for s in sources
-    ]
+    return payload
 
 
 @router.post("", response_model=DataSourceRead, dependencies=[Depends(require_role(["data_steward", "platform_admin"]))])

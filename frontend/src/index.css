@@ -88,8 +88,8 @@
   }
 
   h1, h2, h3, .font-display {
-    font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
-    letter-spacing: -0.02em;
+    font-family: Sora, "IBM Plex Sans", "Segoe UI", sans-serif;
+    letter-spacing: -0.03em;
   }
 
   code, kbd, .font-mono {

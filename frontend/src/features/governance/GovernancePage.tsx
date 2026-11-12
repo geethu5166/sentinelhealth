@@ -1,99 +1,132 @@
 import React from "react";
-import { Ban, Lock, UserCheck } from "lucide-react";
+import { Ban, Lock, ScrollText, UserCheck } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useUser } from "../../auth/useUser";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { apiFetch } from "../../lib/api/client";
 import { PageHeader } from "../../components/ui/page-header";
-import { humanizeKey } from "../../lib/utils";
+import { formatTimestamp, humanizeKey } from "../../lib/utils";
+
+interface AuditEventRow {
+  id: string;
+  action?: string;
+  event_type?: string;
+  resource_type?: string;
+  actor_email?: string;
+  created_at: string;
+  details?: Record<string, unknown>;
+}
 
 export const GovernancePage: React.FC = () => {
   const { user } = useUser();
+  const tenantName = user?.memberships?.find((m) => m.tenant_id === user.current_tenant_id)?.tenant_name
+    || user?.memberships?.[0]?.tenant_name
+    || "Current tenant";
+
+  const audit = useQuery({
+    queryKey: ["audit-events"],
+    queryFn: () => apiFetch<AuditEventRow[]>("/audit-events?limit=20"),
+    retry: false,
+  });
 
   return (
-    <div className="mx-auto max-w-7xl animate-fade-in space-y-6">
+    <div className="mx-auto max-w-5xl animate-fade-in space-y-10">
       <PageHeader
         title="Governance & privacy"
-        description="Authorisation boundaries, prohibited uses, small-cell disclosure controls, and export review."
+        description="Authorisation boundaries, small-cell disclosure controls, and append-only audit review."
       />
 
-      <Card className="border-destructive/40 bg-destructive/5 shadow-panel">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-bold text-destructive">
-            <Ban className="h-4 w-4" aria-hidden /> Prohibited operational & employment uses
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Mandatory policy condition for deploying SentinelHealth in population and workforce health settings.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2 text-xs text-foreground/90">
-          <p>
-            SentinelHealth early warnings are population-level statistical risk indicators. The platform{" "}
-            <strong>must never</strong> be used for:
-          </p>
-          <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
-            <li>Employee productivity scoring, individual performance ranking, or appraisal weighting.</li>
-            <li>Individual sickness monitoring, attendance surveillance, or automated disciplinary action.</li>
-            <li>Determining clinical fitness for work or employment termination.</li>
-            <li>Health insurance eligibility discrimination or premium adjustments.</li>
-            <li>Re-identification attempts against anonymized or suppressed aggregate data cells.</li>
-          </ul>
-        </CardContent>
-      </Card>
+      <section className="rounded-xl border border-destructive/30 bg-destructive/5 px-5 py-4">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-destructive">
+          <Ban className="h-4 w-4" /> Prohibited uses
+        </h2>
+        <ul className="mt-3 list-disc space-y-1.5 pl-5 text-xs text-muted-foreground">
+          <li>Employee productivity scoring, individual performance ranking, or appraisal weighting.</li>
+          <li>Individual sickness monitoring, attendance surveillance, or automated disciplinary action.</li>
+          <li>Clinical fitness-for-work determinations or employment termination.</li>
+          <li>Insurance eligibility discrimination or premium adjustments.</li>
+          <li>Re-identification attempts against suppressed aggregate cells.</li>
+        </ul>
+      </section>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <Card className="shadow-panel">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <UserCheck className="h-4 w-4 text-primary" aria-hidden /> Active operator credentials
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-xs">
+      <section className="grid gap-8 border-y border-border/80 py-8 sm:grid-cols-2">
+        <div className="space-y-3">
+          <h2 className="flex items-center gap-2 font-display text-base font-semibold">
+            <UserCheck className="h-4 w-4 text-primary" /> Active credentials
+          </h2>
+          <dl className="space-y-3 text-sm">
             <div>
-              <span className="text-muted-foreground">Authenticated identity</span>
-              <p className="mt-0.5 text-sm font-semibold">
-                {user?.display_name} ({user?.email})
-              </p>
+              <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">Identity</dt>
+              <dd className="mt-0.5 font-semibold">
+                {user?.display_name} · {user?.email}
+              </dd>
             </div>
             <div>
-              <span className="text-muted-foreground">Active role</span>
-              <p className="mt-0.5 font-mono text-sm font-bold uppercase text-primary">
+              <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">Role</dt>
+              <dd className="mt-0.5 font-mono text-xs font-semibold uppercase text-primary">
                 {humanizeKey(user?.current_role)}
-              </p>
+              </dd>
             </div>
             <div>
-              <span className="text-muted-foreground">Tenant isolation scope</span>
-              <p className="mt-0.5 font-semibold">
-                {user?.memberships?.[0]?.tenant_name || "District Health Authority"} (PostgreSQL RLS)
-              </p>
+              <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">Tenant isolation</dt>
+              <dd className="mt-0.5 text-sm font-medium">{tenantName} · PostgreSQL RLS</dd>
             </div>
-          </CardContent>
-        </Card>
+          </dl>
+        </div>
 
-        <Card className="shadow-panel">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Lock className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden /> Disclosure controls
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-xs">
-            <div className="flex items-center justify-between border-b py-1">
-              <span>Minimum upstream contributors</span>
-              <span className="font-mono font-bold">≥ 10 individuals</span>
+        <div className="space-y-3">
+          <h2 className="flex items-center gap-2 font-display text-base font-semibold">
+            <Lock className="h-4 w-4 text-primary" /> Disclosure controls
+          </h2>
+          <dl className="divide-y border-y border-border/70 text-sm">
+            <div className="flex justify-between gap-3 py-2.5">
+              <dt className="text-muted-foreground">Minimum contributors</dt>
+              <dd className="font-mono text-xs font-semibold">≥ 10</dd>
             </div>
-            <div className="flex items-center justify-between border-b py-1">
-              <span>Small-cell event masking</span>
-              <span className="font-mono font-bold">1 – 4 counts suppressed</span>
+            <div className="flex justify-between gap-3 py-2.5">
+              <dt className="text-muted-foreground">Small-cell masking</dt>
+              <dd className="font-mono text-xs font-semibold">1–4 suppressed</dd>
             </div>
-            <div className="flex items-center justify-between border-b py-1">
-              <span>Complementary marginal suppression</span>
-              <span className="font-bold text-emerald-700 dark:text-emerald-400">Enforced</span>
+            <div className="flex justify-between gap-3 py-2.5">
+              <dt className="text-muted-foreground">Complementary suppression</dt>
+              <dd className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Enforced</dd>
             </div>
-            <div className="flex items-center justify-between py-1">
-              <span>Export CSV formula sanitization</span>
-              <span className="font-bold text-emerald-700 dark:text-emerald-400">Active</span>
+            <div className="flex justify-between gap-3 py-2.5">
+              <dt className="text-muted-foreground">Export formula sanitization</dt>
+              <dd className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Active</dd>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </dl>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="flex items-center gap-2 font-display text-base font-semibold">
+          <ScrollText className="h-4 w-4 text-primary" /> Recent audit events
+        </h2>
+        {audit.isError ? (
+          <p className="text-xs text-muted-foreground">
+            Audit feed requires privacy officer or platform admin scope. Sign in with that role to review the append-only log.
+          </p>
+        ) : audit.isLoading ? (
+          <p className="text-xs text-muted-foreground">Loading audit events…</p>
+        ) : !audit.data?.length ? (
+          <p className="text-xs text-muted-foreground">No audit events recorded for this tenant yet.</p>
+        ) : (
+          <ul className="divide-y border-t border-border/70">
+            {audit.data.slice(0, 12).map((event) => (
+              <li key={event.id} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-medium">
+                    {humanizeKey(event.action || event.event_type || "event")}
+                    {event.resource_type ? ` · ${humanizeKey(event.resource_type)}` : ""}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">{event.actor_email || "system"}</p>
+                </div>
+                <p className="text-[11px] text-muted-foreground">{formatTimestamp(event.created_at)}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 };

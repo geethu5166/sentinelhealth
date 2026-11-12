@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.alerts import router as alerts_router
+from app.api.v1.analytics_routes import router as analytics_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.auth_routes import router as auth_router
 from app.api.v1.exports import router as exports_router
@@ -32,4 +33,5 @@ api_router.include_router(playbooks_router)
 api_router.include_router(validation_router)
 api_router.include_router(exports_router)
 api_router.include_router(audit_router)
+api_router.include_router(analytics_router)
 

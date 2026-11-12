@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Activity, ArrowRight, Loader2, Shield } from "lucide-react";
+import { Activity, ArrowRight, Loader2, Radio, Shield } from "lucide-react";
 import { useAuth } from "../auth/AuthProvider";
 import { cn } from "../lib/utils";
 
-const DEMO_ROLES = [
+const OPERATOR_ROLES = [
   {
     role: "workplace_safety_manager",
     email: "safety@demo.local",
@@ -45,14 +45,14 @@ export const LoginPage: React.FC = () => {
     return <Navigate to="/overview" replace />;
   }
 
-  const handleDemoLogin = async (role: string, email: string) => {
+  const handleOperatorLogin = async (role: string, email: string) => {
     setError(null);
     setPendingEmail(email);
     try {
       await loginAsDemoUser(role, email);
       navigate("/overview");
     } catch {
-      setError("Could not start the demo session. Try again.");
+      setError("Could not start the operator session. Try again.");
     } finally {
       setPendingEmail(null);
     }
@@ -77,11 +77,11 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <h1 className="font-display text-balance text-3xl font-semibold leading-tight tracking-tight text-white sm:text-4xl">
-            Population & workforce health surveillance for accountable prevention.
+            Live environmental screening for accountable prevention.
           </h1>
           <p className="max-w-lg text-sm leading-relaxed text-teal-50/80 sm:text-base">
-            Aggregate environmental, clinical, and workplace signals into privacy-preserving early warnings —
-            with role-based review, playbooks, and audit trails for Indian public and occupational health teams.
+            Train ensemble baselines on realtime Open-Meteo feeds, fuse EWMA and CUSUM residual monitors, and route
+            privacy-preserving episodes to role-based playbooks with full audit trails.
           </p>
 
           <div className="flex flex-wrap gap-3 text-[11px] text-teal-100/75">
@@ -89,10 +89,10 @@ export const LoginPage: React.FC = () => {
               <Shield className="h-3.5 w-3.5" /> Small-cell suppression
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1">
-              <Activity className="h-3.5 w-3.5" /> Multi-signal EWMA screening
+              <Activity className="h-3.5 w-3.5" /> Ensemble · EWMA · CUSUM
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1">
-              Asia/Kolkata · Synthetic demo data
+              <Radio className="h-3.5 w-3.5" /> Asia/Kolkata · realtime weather
             </span>
           </div>
         </section>
@@ -100,22 +100,23 @@ export const LoginPage: React.FC = () => {
         <section className="animate-fade-up w-full max-w-md lg:flex-1" style={{ animationDelay: "120ms" }}>
           <div className="rounded-2xl border border-white/15 bg-white/95 p-6 text-foreground shadow-panel backdrop-blur dark:bg-card/95">
             <div className="mb-5 space-y-1">
-              <h2 className="font-display text-lg font-semibold tracking-tight">Enter the decision console</h2>
+              <h2 className="font-display text-lg font-semibold tracking-tight">Operator access</h2>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Choose a demo identity. Sessions stay in this browser tab and use synthetic fixtures only.
+                Select your role to enter the decision console. Sessions remain scoped to this browser.
               </p>
             </div>
 
             <ul className="space-y-2">
-              {DEMO_ROLES.map((demo) => {
-                const busy = pendingEmail === demo.email;
+              {OPERATOR_ROLES.map((operator) => {
+                const busy = pendingEmail === operator.email;
                 return (
-                  <li key={demo.email}>
+                  <li key={operator.email}>
                     <button
                       type="button"
-                      aria-label={`${demo.name}, ${demo.title}`}
+                      data-testid={`operator-login-${operator.role}`}
+                      aria-label={`${operator.name}, ${operator.title}`}
                       disabled={!!pendingEmail}
-                      onClick={() => handleDemoLogin(demo.role, demo.email)}
+                      onClick={() => handleOperatorLogin(operator.role, operator.email)}
                       className={cn(
                         "group flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card px-3.5 py-3 text-left transition-all",
                         "hover:border-primary/40 hover:bg-secondary/70 hover:shadow-sm",
@@ -123,9 +124,9 @@ export const LoginPage: React.FC = () => {
                       )}
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">{demo.name}</p>
-                        <p className="truncate text-[11px] text-muted-foreground">{demo.title}</p>
-                        <p className="mt-0.5 truncate text-[10px] text-muted-foreground/80">{demo.focus}</p>
+                        <p className="truncate text-sm font-semibold">{operator.name}</p>
+                        <p className="truncate text-[11px] text-muted-foreground">{operator.title}</p>
+                        <p className="mt-0.5 truncate text-[10px] text-muted-foreground/80">{operator.focus}</p>
                       </div>
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-transform group-hover:translate-x-0.5">
                         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
@@ -142,13 +143,12 @@ export const LoginPage: React.FC = () => {
               </p>
             ) : null}
 
-            <div className="mt-5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2.5 text-[11px] leading-relaxed text-amber-900 dark:text-amber-200">
-              <strong>Demonstration prototype.</strong> Not clinically validated, HIPAA/DISHA compliant, or intended
-              for real patient data, employment decisions, or diagnosis.
+            <div className="mt-5 rounded-lg border border-border/80 bg-secondary/50 px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
+              Screening decision support only — not clinically validated for diagnosis, individual care, or punitive use.
             </div>
 
             <p className="mt-4 text-center text-[10px] text-muted-foreground">
-              Keycloak OIDC is available in the full Docker stack; this MVP uses demo tokens for local walkthroughs.
+              Keycloak OIDC available in the full stack; local operators use scoped session tokens.
             </p>
           </div>
         </section>

@@ -98,7 +98,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open = false, onClose }) => {
       <div className="border-t bg-muted/40 p-3">
         <div className="mb-2 flex items-center justify-between gap-2">
           <div className="min-w-0 truncate pr-1">
-            <p className="truncate text-xs font-semibold">{user?.display_name || user?.email || "Demo User"}</p>
+            <p className="truncate text-xs font-semibold">{user?.display_name || user?.email || "Operator"}</p>
             <p className="truncate text-[10px] capitalize text-muted-foreground">
               {humanizeKey(user?.current_role) || "Analyst"}
             </p>
@@ -115,7 +115,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open = false, onClose }) => {
         </div>
         <div className="flex items-center justify-between border-t border-border/50 pt-1 text-[10px] text-muted-foreground">
           <span>Asia/Kolkata</span>
-          <span className="font-mono">v0.1.0</span>
+          <span className="font-mono">console</span>
         </div>
       </div>
     </>

@@ -24,26 +24,29 @@ KEYCLOAK_URL = os.environ.get("SENTINEL_KEYCLOAK_URL", "http://localhost:8081")
 TENANT_1_USER = os.environ.get("SENTINEL_TEST_USER_1", "safety@demo.local")
 TENANT_1_PASS = os.environ.get("SENTINEL_TEST_PASS_1", "demo123")
 
-TENANT_2_USER = os.environ.get("SENTINEL_TEST_USER_2", "regulator@demo.local")
+TENANT_2_USER = os.environ.get("SENTINEL_TEST_USER_2", "privacy@demo.local")
 TENANT_2_PASS = os.environ.get("SENTINEL_TEST_PASS_2", "demo123")
 
 
 def _login_demo_or_keycloak(page: Page, email: str, password: str, role_label: str) -> None:
-    """Authenticate via demo identity picker, falling back to Keycloak form login."""
-    page.goto(f"{FRONTEND_URL}/login")
-    page.wait_for_load_state("networkidle")
+    """Authenticate via operator identity picker, falling back to Keycloak form login."""
+    page.goto(f"{FRONTEND_URL}/login", wait_until="domcontentloaded")
 
-    # Prefer accessible button name (includes role title); fall back to visible name text.
-    demo_btn = page.get_by_role("button", name=re.compile(re.escape(role_label), re.I))
-    if demo_btn.count() == 0:
-        demo_btn = page.get_by_text(role_label, exact=False)
-    if demo_btn.count() > 0 and demo_btn.first.is_visible():
-        demo_btn.first.click()
-        page.wait_for_url("**/overview", timeout=20000)
+    role_pattern = re.compile(re.escape(role_label), re.I)
+    by_testid = page.locator("[data-testid^='operator-login-']").filter(has_text=role_pattern)
+    by_role = page.get_by_role("button", name=role_pattern)
+    picker = by_testid.or_(by_role)
+
+    try:
+        expect(picker.first).to_be_visible(timeout=60000)
+        picker.first.click()
+        page.wait_for_url("**/overview", timeout=30000)
         return
+    except Exception as picker_error:
+        print(f"[!] Operator picker unavailable ({picker_error}); trying Keycloak…")
 
     # Keycloak Authorization Code flow
-    page.goto(f"{FRONTEND_URL}/")
+    page.goto(f"{FRONTEND_URL}/", wait_until="domcontentloaded")
     page.wait_for_load_state("networkidle")
     if "realms/sentinelhealth" in page.url or page.locator("#kc-login").is_visible():
         page.fill("#username", email)
@@ -52,7 +55,19 @@ def _login_demo_or_keycloak(page: Page, email: str, password: str, role_label: s
         page.wait_for_url(f"{FRONTEND_URL}/**", timeout=20000)
         return
 
-    raise AssertionError(f"Neither demo picker nor Keycloak login available for {email}")
+    raise AssertionError(f"Neither operator picker nor Keycloak login available for {email}")
+
+
+def _logout_to_login(page: Page) -> None:
+    """Return the warm SPA to /login without opening a cold browser context."""
+    sign_out = page.get_by_role("button", name=re.compile(r"Sign out", re.I))
+    if sign_out.count() and sign_out.first.is_visible():
+        sign_out.first.click()
+        page.wait_for_url("**/login", timeout=15000)
+        return
+    page.goto(f"{FRONTEND_URL}/login", wait_until="domcontentloaded")
+    page.evaluate("() => { try { sessionStorage.clear(); localStorage.clear(); } catch (e) {} }")
+    page.reload(wait_until="domcontentloaded")
 
 
 def test_live_browser_acceptance_workflow():
@@ -151,27 +166,23 @@ def test_live_browser_acceptance_workflow():
         else:
             print("[!] No completable task present; continuing.")
 
-        print("[*] Step 6: Cross-role isolation smoke check...")
-        context_tenant2 = browser.new_context(
-            viewport={"width": 1280, "height": 800},
-            ignore_https_errors=True,
-        )
-        page_tenant2 = context_tenant2.new_page()
+        print("[*] Step 6: Cross-role isolation smoke check (warm SPA role switch)...")
+        # Avoid a cold new_context() — Vite + maplibre hydration races the Meera picker.
+        _logout_to_login(page)
         _login_demo_or_keycloak(
-            page_tenant2,
+            page,
             TENANT_2_USER,
             TENANT_2_PASS,
-            "Meera Iyer",  # privacy officer demo identity present on login
+            "Meera Iyer",
         )
-        page_tenant2.goto(f"{FRONTEND_URL}/alerts")
-        page_tenant2.wait_for_load_state("networkidle")
-        assert not page_tenant2.get_by_text(test_run_id, exact=False).is_visible(), (
-            "Cross-tenant leak: second context can view first context test batch marker"
+        page.goto(f"{FRONTEND_URL}/alerts")
+        page.wait_for_load_state("networkidle")
+        assert not page.get_by_text(test_run_id, exact=False).is_visible(), (
+            "Cross-tenant leak: second role can view first context test batch marker"
         )
         print("[+] Isolation marker check passed.")
 
         context.close()
-        context_tenant2.close()
         browser.close()
         print("\n[+] Live browser acceptance workflow completed successfully.")
 

@@ -1,133 +1,118 @@
-import React, { useState } from "react";
-import { AlertTriangle, Play } from "lucide-react";
+import React from "react";
+import { AlertTriangle, Loader2, Play } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiFetch } from "../../lib/api/client";
 import { Button } from "../../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { PageHeader } from "../../components/ui/page-header";
+import { ErrorState } from "../../components/ui/error-state";
 
-const FIXTURE_RESULTS = {
-  scenario: "heat-gradual",
-  data_label: "synthetic",
+interface ReplayResult {
+  id: string;
+  scenario: string;
+  status: string;
+  data_label: string;
   metrics: {
-    event_sensitivity: 1.0,
-    alert_ppv: 0.857,
-    false_alarm_burden_per_week: 0.2,
-    useful_action_lead_days: 1.0,
-  },
-  limitations: [
-    "Evaluated on an explicitly simulated synthetic test fixture.",
-    "Real-world clinical sensitivity and PPV require prospective pilot validation.",
-    "Weather screening uses model grid resolution, not on-site micro-climate measurements.",
-  ],
-};
+    event_sensitivity: number;
+    alert_ppv: number;
+    false_alarm_burden_per_week: number;
+    useful_action_lead_days: number;
+  };
+  limitations: string[];
+}
 
 export const ValidationPage: React.FC = () => {
-  const [isRunning, setIsRunning] = useState(false);
-  const [hasRun, setHasRun] = useState(false);
+  const queryClient = useQueryClient();
+  const runs = useQuery({
+    queryKey: ["validation-runs"],
+    queryFn: () => apiFetch<any[]>("/validation/runs"),
+  });
 
-  const handleRunReplay = () => {
-    setIsRunning(true);
-    window.setTimeout(() => {
-      setIsRunning(false);
-      setHasRun(true);
-    }, 900);
-  };
+  const replay = useMutation({
+    mutationFn: () =>
+      apiFetch<ReplayResult>("/validation/runs", {
+        method: "POST",
+        body: JSON.stringify({ scenario_name: "heat-gradual" }),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["validation-runs"] }),
+  });
 
-  const results = hasRun ? FIXTURE_RESULTS : null;
+  const latest = replay.data;
+  const prior = !latest && Array.isArray(runs.data) && runs.data[0]
+    ? {
+        scenario: runs.data[0].scenario?.name || "heat-gradual",
+        data_label: runs.data[0].scenario?.data_label || "benchmark",
+        metrics: runs.data[0].results_summary?.metrics,
+        limitations: runs.data[0].results_summary?.limitations || [],
+      }
+    : null;
+  const results = latest || (prior?.metrics ? prior : null);
 
   return (
-    <div className="mx-auto max-w-7xl animate-fade-in space-y-6">
+    <div className="mx-auto max-w-5xl animate-fade-in space-y-8">
       <PageHeader
         title="Replay validation"
-        description="Honest evaluation using chronological replay with withheld ground-truth labels and episode matching."
+        description="Chronological holdout replay with withheld labels. Metrics certify pipeline wiring, not clinical effectiveness."
         actions={
-          <Button onClick={handleRunReplay} disabled={isRunning} size="sm">
-            <Play className="mr-1.5 h-4 w-4" />
-            {isRunning ? "Running fixture…" : "Run synthetic replay"}
+          <Button size="sm" onClick={() => replay.mutate()} disabled={replay.isPending}>
+            {replay.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Play className="mr-1.5 h-4 w-4" />}
+            {replay.isPending ? "Running…" : "Run heat-gradual replay"}
           </Button>
         }
       />
 
-      <Card className="border-amber-500/40 bg-amber-500/5 shadow-panel">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-400">
-            <AlertTriangle className="h-4 w-4" aria-hidden /> Demo fixture mode
-          </CardTitle>
-          <CardDescription className="text-xs">
-            This console replays a packaged synthetic scenario (`heat-gradual`). Metrics demonstrate pipeline wiring,
-            not certified real-world effectiveness.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      {runs.isError ? (
+        <ErrorState title="Validation API unavailable" description="Could not list prior replay runs." onRetry={() => runs.refetch()} />
+      ) : null}
+
+      {replay.isError ? (
+        <p className="text-xs text-destructive">Replay failed. Confirm API auth and replay routes are available.</p>
+      ) : null}
 
       {!results ? (
-        <Card className="shadow-panel">
-          <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Run the synthetic replay to load fixture sensitivity, PPV, and lead-time metrics.
-          </CardContent>
-        </Card>
+        <div className="rounded-xl border border-dashed px-6 py-14 text-center">
+          <p className="text-sm text-muted-foreground">
+            No replay result yet. Run the heat-gradual benchmark to load sensitivity, PPV, and lead-time metrics.
+          </p>
+        </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card className="shadow-panel">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-semibold text-muted-foreground">Event sensitivity</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="font-display text-3xl font-semibold text-emerald-600 dark:text-emerald-400">
-                  {(results.metrics.event_sensitivity * 100).toFixed(0)}%
-                </div>
-                <p className="mt-1 text-[11px] text-muted-foreground">Matched ground-truth heat events</p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-panel">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-semibold text-muted-foreground">Alert episode PPV</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="font-display text-3xl font-semibold text-primary">
-                  {(results.metrics.alert_ppv * 100).toFixed(1)}%
-                </div>
-                <p className="mt-1 text-[11px] text-muted-foreground">Deduplicated true positive episodes</p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-panel">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-semibold text-muted-foreground">False alarm burden</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="font-display text-3xl font-semibold text-amber-600">
-                  {results.metrics.false_alarm_burden_per_week}
-                </div>
-                <p className="mt-1 text-[11px] text-muted-foreground">Unmatched episodes / site-week</p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-panel">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-semibold text-muted-foreground">Action lead time</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="font-display text-3xl font-semibold">
-                  +{results.metrics.useful_action_lead_days * 24}h
-                </div>
-                <p className="mt-1 text-[11px] text-muted-foreground">Warning before peak impact (fixture)</p>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-2 gap-6 border-y border-border/80 py-8 sm:grid-cols-4">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Sensitivity</p>
+              <p className="mt-2 font-display text-3xl font-semibold text-emerald-700 dark:text-emerald-400">
+                {(Number(results.metrics.event_sensitivity) * 100).toFixed(0)}%
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Alert PPV</p>
+              <p className="mt-2 font-display text-3xl font-semibold">
+                {(Number(results.metrics.alert_ppv) * 100).toFixed(1)}%
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">False alarms / week</p>
+              <p className="mt-2 font-display text-3xl font-semibold">
+                {Number(results.metrics.false_alarm_burden_per_week)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Action lead</p>
+              <p className="mt-2 font-display text-3xl font-semibold">
+                +{Number(results.metrics.useful_action_lead_days) * 24}h
+              </p>
+            </div>
           </div>
 
-          <Card className="border-amber-500/40 bg-amber-500/5 shadow-panel">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-400">
-                <AlertTriangle className="h-4 w-4" aria-hidden /> Limitations
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
-                {results.limitations.map((lim) => (
-                  <li key={lim}>{lim}</li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
+          <section className="space-y-3">
+            <h2 className="flex items-center gap-2 font-display text-base font-semibold">
+              <AlertTriangle className="h-4 w-4 text-primary" /> Limitations
+            </h2>
+            <ul className="list-disc space-y-1.5 pl-5 text-xs text-muted-foreground">
+              {(results.limitations || []).map((lim: string) => (
+                <li key={lim}>{lim}</li>
+              ))}
+            </ul>
+          </section>
         </>
       )}
     </div>

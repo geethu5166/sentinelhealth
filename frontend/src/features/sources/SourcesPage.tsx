@@ -64,7 +64,7 @@ export const SourcesPage: React.FC = () => {
             <EmptyState
               icon={Database}
               title="No sources registered"
-              description="Seed demo data or register connectors to populate this view."
+              description="Register Open-Meteo, clinic, or EHS connectors to populate this view."
             />
           ) : (
             <div className="overflow-x-auto">
